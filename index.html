@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLM Basissystem Prototyp</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <header class="bg-white shadow-md dark:bg-gray-800">
+        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-gray-800 dark:text-white">PLM Prototyp</h1>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><button data-route="dashboard" class="nav-link text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400">Dashboard</button></li>
+                    <li><button data-route="create" class="nav-link text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400">Neues Produkt</button></li>
+                    <li><button data-route="bom" class="nav-link text-gray-600 hover:text-purple-600 dark:text-gray-300 dark:hover:text-purple-400">Stücklisten (Sim)</button></li>
+                    <li><button data-route="documents" class="nav-link text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400">Dokumente (Sim)</button></li>
+                     <li><button data-route="settings" class="nav-link text-gray-600 hover:text-teal-600 dark:text-gray-300 dark:hover:text-teal-400">Einstellungen (Sim)</button></li>
+                </ul>
+            </nav>
+             <button id="theme-toggle" class="p-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm">
+                Modus umschalten
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 flex-grow" id="content-area">
+        </main>
+
+    <footer class="mt-8 py-4 text-center text-gray-500 text-sm dark:text-gray-400">
+        PLM Prototyp - Frontend Simulation
+    </footer>
+
+
+    <script src="./js/state.js"></script>
+    <script src="./js/domUtils.js"></script>
+    <script src="./js/router.js"></script>
+    <script src="./js/views/dashboardView.js"></script>
+    <script src="./js/views/productFormView.js"></script>
+    <script src="./js/views/productDetailsView.js"></script>
+     <script src="./js/views/bomView.js"></script>
+     <script src="./js/views/documentsView.js"></script>
+     <script src="./js/views/settingsView.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
