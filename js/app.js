@@ -108,17 +108,34 @@ document.addEventListener('DOMContentLoaded', () => {
          console.log("[app.js] Header Click Listener hinzugefügt (Bubbling Phase).");
          header.addEventListener('click', (event) => { // Sicherstellen, dass event übergeben wird
              const target = event.target;
+
+             // *** ANGEPASSTES LOGGING zur besseren Nachverfolgung ***
+             // WICHTIG: Prüfen, ob contentArea überhaupt existiert, bevor .contains aufgerufen wird
+             if (!contentArea) {
+                console.error("[app.js - BUBBLING] KRITISCH: contentArea Element ist null. Die Prüfung 'clickInsideContentArea' wird fehlschlagen oder Fehler verursachen.");
+             }
              console.log("[app.js - BUBBLING] Click Event auf header registriert. Target:", target);
+
 
              // Robuste Prüfung: Überprüfe, ob der Klick seinen Ursprung im Hauptinhaltsbereich hat.
              // Diese Prüfung ist nun wieder entscheidend, da der aggressive Capture Listener fehlt.
              const clickInsideContentArea = contentArea && contentArea.contains(target);
-             console.log("[app.js - BUBBLING] Prüfung: clickInsideContentArea =", clickInsideContentArea);
+
+             // Erweitertes Logging für diese kritische Prüfung:
+             console.log(
+                "[app.js - BUBBLING] Prüfung: clickInsideContentArea =", clickInsideContentArea,
+                "; contentArea vorhanden:", !!contentArea, // Zeigt an, ob contentArea zum Zeitpunkt des Klicks existiert
+                "; target:", target // Das tatsächlich geklickte Element
+             );
+
 
              if (clickInsideContentArea) {
                  console.log("[app.js - BUBBLING] Klick kam aus dem Inhaltsbereich, ignoriere im Header-Listener.");
                  // Wir lassen das Event hier bewusst weiter blubbern, damit der tbody-Listener in bomView.js
-                 // das Event empfangen kann.
+                 // das Event empfangen kann. (Kommentar überarbeitet: Wenn bomView.js stopPropagation() macht, kommt es hier nicht an)
+                 // Wenn dieser Block erreicht wird, bedeutet das, dass event.stopPropagation() in bomView.js
+                 // den Event NICHT gestoppt hat oder dieser Listener vor einem anderen relevanten Listener feuert.
+                 // Dieser 'return' ist dann der letzte Schutz, um die Header-Navigation zu verhindern.
                  return;
              }
 
