@@ -207,17 +207,17 @@ function render(containerElement, productId = null) {
 // Event Handler für Klicks auf Karten (delegiert vom cardsContainer)
 function handleCardClick(event) {
     const target = event.target;
-    console.log("[bomView] Karten-Container Klick Event ausgelöst. Geklickt auf:", target);
+    // console.log("[bomView] Karten-Container Klick Event ausgelöst. Geklickt auf:", target); // Ursprüngliches Logging
 
     // Finde die geklickte Karte, die zum Rein-Drillen markiert ist
     // Nutze .closest(), um sicherzustellen, dass wir die Karte selbst bekommen, auch wenn auf Kind-Elemente geklickt wird
     const clickedCard = target.closest('[data-action="drill-down"]');
 
     if (clickedCard) {
-        console.log("[bomView] Klick erfolgte auf eine drill-down Karte:", clickedCard);
+        // *** ANGEPASSTES LOGGING zur besseren Nachverfolgung ***
+        console.log("[bomView] Klick erfolgte auf eine drill-down Karte:", clickedCard, "Ursprüngliches Target war:", target);
+        console.log("[bomView] Rufe jetzt event.preventDefault() und event.stopPropagation() auf.");
         // Verhindere Standardaktionen und Event-Weitergabe.
-        // Obwohl ein div/span/etc. keine Standardaktion hat, ist stopPropagation wichtig
-        // um zu verhindern, dass der Klick den Header-Listener in app.js erreicht (falls der aggressive Listener fehlt oder umgangen wird).
         event.preventDefault(); // Verhindert z.B. Textselektion bei schnellem Doppelklick
         event.stopPropagation(); // WICHTIG: Verhindert Durchdringen zu übergeordneten Listenern
 
@@ -247,7 +247,7 @@ function handleCardClick(event) {
 
     } else {
          // Klick kam im cardsContainer, aber nicht auf eine klickbare Karte (z.B. Zwischenraum oder Karte ohne Kinder)
-         console.log("[bomView] Klick im Karten-Container war nicht auf eine drill-down Karte. Ignoriere.");
+         console.log("[bomView] Klick im Karten-Container war nicht auf eine drill-down Karte. Ignoriere. Geklicktes Element:", target);
     }
 }
 
