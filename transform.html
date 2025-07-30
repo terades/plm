@@ -5,23 +5,42 @@
 <title>Produktionsauftrag Transformation</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  /* Stellt sicher, dass der JSON-Inhalt korrekt umgebrochen wird */
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
 </style>
 </head>
-<body class="p-6 font-sans bg-gray-50">
-<h1 class="text-2xl font-semibold mb-4">CSV zu JSON Transformation</h1>
-<p class="mb-4">Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird per JSONata transformiert.</p>
-<textarea id="csvInput" rows="10" class="w-full p-2 border rounded mb-4" placeholder="CSV-Daten hier einfügen"></textarea>
-<button id="transformButton" class="px-4 py-2 bg-blue-500 text-white rounded mb-6">Transformieren</button>
-<h2 class="text-xl font-semibold mb-2">Ausgabe</h2>
-<table id="resultsTable" class="w-full table-auto border-collapse">
-  <thead>
-    <tr class="bg-gray-200"><th class="border p-2">#</th><th class="border p-2">JSON</th><th class="border p-2">Aktion</th></tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<body class="p-6 font-sans bg-gray-50 text-gray-800">
+
+<div class="max-w-7xl mx-auto">
+  <h1 class="text-3xl font-bold mb-2">CSV zu JSON Transformation</h1>
+  <p class="mb-6 text-gray-600">Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird automatisch anhand der hinterlegten JSONata-Regel transformiert.</p>
+
+  <textarea id="csvInput" rows="12" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4" placeholder="CSV-Daten hier einfügen..."></textarea>
+  <button id="transformButton" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-8">Transformieren</button>
+
+  <h2 class="text-2xl font-bold mb-4">Ausgabe</h2>
+  <div class="overflow-hidden border border-gray-200 rounded-lg shadow-md">
+    <table id="resultsTable" class="w-full table-auto border-collapse">
+      <thead class="bg-gray-100">
+        <tr class="text-left">
+          <th class="border-b p-3 font-semibold w-16">#</th>
+          <th class="border-b p-3 font-semibold">Transformiertes JSON</th>
+          <th class="border-b p-3 font-semibold w-32 text-center">Aktion</th>
+        </tr>
+      </thead>
+      <tbody>
+        </tbody>
+    </table>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/jsonata/jsonata.min.js"></script>
 <script>
+// Die JSONata-Expression wird hier korrigiert.
 const expression = `{
   "messageType": [
     "GB.D365EventProcessor.D365EventTransformed.ProductionOrderReleased"
@@ -48,7 +67,7 @@ const expression = `{
   "partGrossDepth": $number(ProdTable.FIELD_ProdTable_inventTable_grossDepth),
   "partGrossWeight": $number(ProdTable.FIELD_ProdTable_inventTable_grossWeight),
   "partGrossVolume": $number(ProdTable.FIELD_ProdTable_inventTable_grossVolume),
-  "resource": ProdTable.ProdRoute[0].ProdRouteJob[0].FIELD_ProdRouteJob_WrkCtrId,
+  "resource": ProdTable.ProdRoute.ProdRouteJob[0].FIELD_ProdRouteJob_WrkCtrId,
   "orderNumber": ProdTable.FIELD_ProdTable_GLDICSalesId ? ProdTable.FIELD_ProdTable_GLDICSalesId : null,
   "mesColor": ProdTable.FIELD_ProdTable_GLDColor,
   "mesCoatingType": ProdTable.FIELD_ProdTable_GLDCoatingType,
@@ -56,7 +75,7 @@ const expression = `{
   "rawMaterialConfig": ProdTable.FIELD_ProdTable_GLDRawMaterialConfigId,
   "rawMaterialColor": ProdTable.FIELD_ProdTable_GLDRawMaterialColor,
   "rawMaterialStyle": ProdTable.FIELD_ProdTable_GLDRawMaterialStyleId,
-  "serialId": ProdTable.ProdTable.FIELD_ProdTable_inventDim_inventSerialId,
+  "serialId": ProdTable.FIELD_ProdTable_inventDim_inventSerialId,
   "refProductionId": ProdTable.ProdTable_GLDCollectRef.FIELD_ProdTable_ProdId,
   "referenceOrder": {
     "productionId": ProdTable.ProdTable_GLDCollectRef.FIELD_ProdTable_ProdId,
@@ -136,45 +155,83 @@ const expression = `{
 const transform = jsonata(expression);
 
 document.getElementById('transformButton').addEventListener('click', () => {
-  const inputText = document.getElementById('csvInput').value.trim();
-  const lines = inputText.split(/\r?\n/).filter(line => line.trim());
-  if(lines.length && lines[0].startsWith('"timestamp"')) {
-    lines.shift();
-  }
+  const inputText = document.getElementById('csvInput').value;
   const tbody = document.querySelector('#resultsTable tbody');
   tbody.innerHTML = '';
-  lines.forEach((line, idx) => {
-    const comma = line.indexOf(',');
-    if (comma === -1) return;
-    let jsonPart = line.slice(comma + 1).trim();
+
+  const rawLines = inputText.trim().split(/\r?\n/);
+  const logicalLines = [];
+  let currentLogicalLine = "";
+
+  for (const rawLine of rawLines) {
+    const isNewRecord = rawLine.startsWith('"timestamp"') || /^\d{4}-\d{2}-\d{2}/.test(rawLine.trim());
+
+    if (isNewRecord && currentLogicalLine !== "") {
+      logicalLines.push(currentLogicalLine);
+      currentLogicalLine = rawLine;
+    } else {
+      currentLogicalLine += (currentLogicalLine ? "\n" : "") + rawLine;
+    }
+  }
+  if (currentLogicalLine !== "") {
+    logicalLines.push(currentLogicalLine);
+  }
+
+  if (logicalLines.length > 0 && logicalLines[0].startsWith('"timestamp"')) {
+    logicalLines.shift();
+  }
+
+  logicalLines.forEach((line, idx) => {
+    const commaIndex = line.indexOf(',');
+    if (commaIndex === -1) return;
+
+    let jsonPart = line.substring(commaIndex + 1).trim();
+
     if (jsonPart.startsWith('"') && jsonPart.endsWith('"')) {
       jsonPart = jsonPart.slice(1, -1);
     }
+    
     jsonPart = jsonPart.replace(/""/g, '"');
+    
     let formatted;
     try {
       const message = JSON.parse(jsonPart);
       const result = transform.evaluate(message);
       formatted = JSON.stringify(result, null, 2);
-    } catch(e) {
-      formatted = `Fehler bei Zeile: ${line}\n${e}`;
+    } catch (e) {
+      formatted = `Fehler beim Verarbeiten von Zeile ${idx + 1}:\n${e.message}\n\n--- Problemhafter JSON-Teil (nach Bereinigung) ---\n${jsonPart}`;
     }
+
     const tr = document.createElement('tr');
+    tr.className = 'align-top bg-white even:bg-gray-50';
+
     const tdIndex = document.createElement('td');
-    tdIndex.className = 'border p-2';
+    tdIndex.className = 'border-b border-gray-200 p-3 text-center text-gray-500';
     tdIndex.textContent = idx + 1;
+
     const tdJson = document.createElement('td');
-    tdJson.className = 'border p-2';
+    tdJson.className = 'border-b border-gray-200 p-3';
     const pre = document.createElement('pre');
+    pre.className = 'text-sm text-gray-700';
     pre.textContent = formatted;
     tdJson.appendChild(pre);
+
     const tdAction = document.createElement('td');
-    tdAction.className = 'border p-2';
+    tdAction.className = 'border-b border-gray-200 p-3 text-center';
     const btn = document.createElement('button');
-    btn.className = 'px-2 py-1 bg-green-500 text-white rounded';
+    btn.className = 'px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-green-600 transition-colors';
     btn.textContent = 'Kopieren';
-    btn.addEventListener('click', () => navigator.clipboard.writeText(formatted));
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(formatted);
+      btn.textContent = 'Kopiert!';
+      btn.classList.replace('bg-green-500', 'bg-indigo-500');
+      setTimeout(() => {
+        btn.textContent = 'Kopieren';
+        btn.classList.replace('bg-indigo-500', 'bg-green-500');
+      }, 2000);
+    });
     tdAction.appendChild(btn);
+
     tr.appendChild(tdIndex);
     tr.appendChild(tdJson);
     tr.appendChild(tdAction);
