@@ -1,5 +1,5 @@
 import json
-from jsonata import jsonata
+import jsonata
 
 def transform_json_with_jsonata(json_data: dict, jsonata_expression: str) -> dict:
     """
@@ -13,8 +13,8 @@ def transform_json_with_jsonata(json_data: dict, jsonata_expression: str) -> dic
         dict: Das transformierte JSON-Objekt.
     """
     try:
-        j_expression = jsonata(jsonata_expression)
-        transformed_data = j_expression.evaluate(json_data)
+        j_expression = jsonata.jsonata(jsonata_expression)
+        transformed_data = j_expression.match(json_data)
         return transformed_data
     except Exception as e:
         print(f"Fehler bei der Transformation: {e}")
