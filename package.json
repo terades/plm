@@ -4,7 +4,8 @@
   "description": "CSV to JSON transformation using JSONata",
   "main": "csv_transform.js",
   "scripts": {
-    "transform": "node csv_transform.js test.csv > output.json"
+    "transform": "node csv_transform.js test.csv > output.json",
+    "start": "node server.js"
   },
   "dependencies": {
     "jsonata": "^1.8.6"

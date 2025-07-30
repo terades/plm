@@ -22,3 +22,14 @@ npm run transform
 ```
 
 Der Befehl liest `test.csv`, wandelt jede Zeile per JSONata um und schreibt das Ergebnis nach `output.json`.
+
+## Website im Codespace starten
+
+Im GitHub Codespace kann ein kleiner Webserver gestartet werden, um die HTML-Oberfläche zu nutzen:
+
+```bash
+npm install    # falls noch nicht geschehen
+npm start
+```
+
+Nach dem Start zeigt Codespaces einen Link für Port 8080 an. Über diesen kann `transform.html` im Browser geöffnet werden.
