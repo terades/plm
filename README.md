@@ -15,8 +15,9 @@ Die Transformation erzeugt für jede Zeile ein JSON mit umfangreichen Informatio
 
 Alternativ kann die Transformation auch auf der Kommandozeile erfolgen:
 
-```
-cat eingabe.csv | python csv_transform.py
+```bash
+npm install
+npm run transform
 ```
 
-Dabei wird für jede Zeile der CSV-Datei das JSON transformiert und als Liste von Objekten ausgegeben.
+Der Befehl liest `test.csv`, wandelt jede Zeile per JSONata um und schreibt das Ergebnis nach `output.json`.
