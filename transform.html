@@ -3,23 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <title>Produktionsauftrag Transformation</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  textarea { width: 100%; box-sizing: border-box; }
-  #resultsTable { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  #resultsTable th, #resultsTable td { border: 1px solid #ccc; padding: 5px; vertical-align: top; }
   pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
 </style>
 </head>
-<body>
-<h1>CSV zu JSON Transformation</h1>
-<p>Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird per JSONata transformiert.</p>
-<textarea id="csvInput" rows="10" placeholder="CSV-Daten hier einfügen"></textarea>
-<button id="transformButton">Transformieren</button>
-<h2>Ausgabe</h2>
-<table id="resultsTable">
+<body class="p-6 font-sans bg-gray-50">
+<h1 class="text-2xl font-semibold mb-4">CSV zu JSON Transformation</h1>
+<p class="mb-4">Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird per JSONata transformiert.</p>
+<textarea id="csvInput" rows="10" class="w-full p-2 border rounded mb-4" placeholder="CSV-Daten hier einfügen"></textarea>
+<button id="transformButton" class="px-4 py-2 bg-blue-500 text-white rounded mb-6">Transformieren</button>
+<h2 class="text-xl font-semibold mb-2">Ausgabe</h2>
+<table id="resultsTable" class="w-full table-auto border-collapse">
   <thead>
-    <tr><th>#</th><th>JSON</th><th>Aktion</th></tr>
+    <tr class="bg-gray-200"><th class="border p-2">#</th><th class="border p-2">JSON</th><th class="border p-2">Aktion</th></tr>
   </thead>
   <tbody></tbody>
 </table>
@@ -153,6 +150,7 @@ document.getElementById('transformButton').addEventListener('click', () => {
     if (jsonPart.startsWith('"') && jsonPart.endsWith('"')) {
       jsonPart = jsonPart.slice(1, -1);
     }
+    jsonPart = jsonPart.replace(/""/g, '"');
     let formatted;
     try {
       const message = JSON.parse(jsonPart);
@@ -163,13 +161,17 @@ document.getElementById('transformButton').addEventListener('click', () => {
     }
     const tr = document.createElement('tr');
     const tdIndex = document.createElement('td');
+    tdIndex.className = 'border p-2';
     tdIndex.textContent = idx + 1;
     const tdJson = document.createElement('td');
+    tdJson.className = 'border p-2';
     const pre = document.createElement('pre');
     pre.textContent = formatted;
     tdJson.appendChild(pre);
     const tdAction = document.createElement('td');
+    tdAction.className = 'border p-2';
     const btn = document.createElement('button');
+    btn.className = 'px-2 py-1 bg-green-500 text-white rounded';
     btn.textContent = 'Kopieren';
     btn.addEventListener('click', () => navigator.clipboard.writeText(formatted));
     tdAction.appendChild(btn);
