@@ -1,31 +1,11 @@
 import json
-import jsonata
+try:
+    import jsonata
+except ModuleNotFoundError:  # pragma: no cover - jsonata might be missing
+    jsonata = None
 
-def transform_json_with_jsonata(json_data: dict, jsonata_expression: str) -> dict:
-    """
-    Transformiert ein JSON-Objekt mithilfe einer JSONata-Expression.
-
-    Args:
-        json_data (dict): Das einzugebende JSON-Objekt.
-        jsonata_expression (str): Die JSONata-Expression als String.
-
-    Returns:
-        dict: Das transformierte JSON-Objekt.
-    """
-    try:
-        j_expression = jsonata.jsonata(jsonata_expression)
-        transformed_data = j_expression.match(json_data)
-        return transformed_data
-    except Exception as e:
-        print(f"Fehler bei der Transformation: {e}")
-        return {}
-
-def main():
-    """
-    Hauptfunktion zum Abfragen von Benutzereingaben und zur Durchführung der Transformation.
-    """
-    # Ihre vordefinierte JSONata-Expression
-    jsonata_expression = r'''
+# Zentrale JSONata-Expression, die von allen Funktionen verwendet wird
+JSONATA_EXPRESSION = r'''
 {
   "messageType": [
     "GB.D365EventProcessor.D365EventTransformed.ProductionOrderReleased"
@@ -137,6 +117,33 @@ def main():
   }
 }
 '''
+
+def transform_json_with_jsonata(json_data: dict, jsonata_expression: str = JSONATA_EXPRESSION) -> dict:
+    """
+    Transformiert ein JSON-Objekt mithilfe einer JSONata-Expression.
+
+    Args:
+        json_data (dict): Das einzugebende JSON-Objekt.
+        jsonata_expression (str): Die JSONata-Expression als String.
+
+    Returns:
+        dict: Das transformierte JSON-Objekt.
+    """
+    if jsonata is None:
+        raise RuntimeError("jsonata library not installed")
+    try:
+        j_expression = jsonata.jsonata(jsonata_expression)
+        transformed_data = j_expression.match(json_data)
+        return transformed_data
+    except Exception as e:
+        print(f"Fehler bei der Transformation: {e}")
+        return {}
+
+def main():
+    """
+    Hauptfunktion zum Abfragen von Benutzereingaben und zur Durchführung der Transformation.
+    """
+    jsonata_expression = JSONATA_EXPRESSION
 
     print("Bitte fügen Sie den JSON-Text ein (Beenden mit einer leeren Zeile und dann Strg+D auf Linux/macOS oder Strg+Z, Enter auf Windows):")
     json_lines = []
