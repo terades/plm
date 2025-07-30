@@ -6,9 +6,10 @@ Diese kleine Anwendung erlaubt es, mehrere CSV-Zeilen einzufügen, die jeweils e
 ## Verwendung
 
 1. `transform.html` in einem Browser öffnen.
-2. Die CSV-Daten in das Textfeld einfügen (inklusive mehrerer Zeilen).
-3. Auf **Transformieren** klicken.
-4. Darunter erscheint eine Tabelle mit dem transformierten JSON je Zeile.
+2. Optional kann über **Datei auswählen** eine CSV-Datei hochgeladen werden und der Inhalt landet im Textfeld.
+3. Die CSV-Daten im Textfeld können weiterhin bearbeitet werden.
+4. Auf **Transformieren** klicken oder direkt nach dem Upload wird die Tabelle befüllt.
+5. Darunter erscheint eine Tabelle mit dem transformierten JSON je Zeile.
    Über den **Kopieren**-Knopf in jeder Tabellenzeile kann das jeweilige JSON in die Zwischenablage übernommen werden.
 
 Die Transformation erzeugt für jede Zeile ein JSON mit umfangreichen Informationen zum Produktionsauftrag.
