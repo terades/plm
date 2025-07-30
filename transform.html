@@ -11,6 +11,10 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
+  .collapsed {
+    max-height: 6em;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body class="p-6 font-sans bg-gray-50 text-gray-800">
@@ -212,9 +216,21 @@ function processCsv(text) {
 
     const tdJson = document.createElement('td');
     tdJson.className = 'border-b border-gray-200 p-3';
+
+    const toggle = document.createElement('button');
+    toggle.className = 'mr-2 text-blue-600 font-bold focus:outline-none';
+    toggle.textContent = '▶';
+
     const pre = document.createElement('pre');
-    pre.className = 'text-sm text-gray-700';
+    pre.className = 'text-sm text-gray-700 collapsed';
     pre.textContent = formatted;
+
+    toggle.addEventListener('click', () => {
+      pre.classList.toggle('collapsed');
+      toggle.textContent = pre.classList.contains('collapsed') ? '▶' : '▼';
+    });
+
+    tdJson.appendChild(toggle);
     tdJson.appendChild(pre);
 
     const tdAction = document.createElement('td');
