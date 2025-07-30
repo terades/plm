@@ -17,7 +17,9 @@
 
 <div class="max-w-7xl mx-auto">
   <h1 class="text-3xl font-bold mb-2">CSV zu JSON Transformation</h1>
-  <p class="mb-6 text-gray-600">Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird automatisch anhand der hinterlegten JSONata-Regel transformiert.</p>
+  <p class="mb-6 text-gray-600">Fügen Sie unten die CSV-Zeilen ein oder laden Sie eine CSV-Datei hoch. Jeder Datensatz wird automatisch anhand der hinterlegten JSONata-Regel transformiert.</p>
+
+  <input type="file" id="csvFile" accept=".csv" class="mb-4" />
 
   <textarea id="csvInput" rows="12" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4" placeholder="CSV-Daten hier einfügen..."></textarea>
   <button id="transformButton" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-8">Transformieren</button>
@@ -154,12 +156,11 @@ const expression = `{
 
 const transform = jsonata(expression);
 
-document.getElementById('transformButton').addEventListener('click', () => {
-  const inputText = document.getElementById('csvInput').value;
+function processCsv(text) {
   const tbody = document.querySelector('#resultsTable tbody');
   tbody.innerHTML = '';
 
-  const rawLines = inputText.trim().split(/\r?\n/);
+  const rawLines = text.trim().split(/\r?\n/);
   const logicalLines = [];
   let currentLogicalLine = "";
 
@@ -237,6 +238,23 @@ document.getElementById('transformButton').addEventListener('click', () => {
     tr.appendChild(tdAction);
     tbody.appendChild(tr);
   });
+}
+
+document.getElementById('transformButton').addEventListener('click', () => {
+  const inputText = document.getElementById('csvInput').value;
+  processCsv(inputText);
+});
+
+document.getElementById('csvFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const text = ev.target.result;
+    document.getElementById('csvInput').value = text;
+    processCsv(text);
+  };
+  reader.readAsText(file);
 });
 </script>
 </body>
