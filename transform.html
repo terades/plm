@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Produktionsauftrag Transformation</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  textarea { width: 100%; box-sizing: border-box; }
+  #jsonOutput { height: 300px; }
+</style>
+</head>
+<body>
+<h1>CSV zu JSON Transformation</h1>
+<p>Fügen Sie unten die CSV-Zeilen ein. Jeder Datensatz wird per JSONata transformiert.</p>
+<textarea id="csvInput" rows="10" placeholder="CSV-Daten hier einfügen"></textarea>
+<button id="transformButton">Transformieren</button>
+<h2>Ausgabe</h2>
+<textarea id="jsonOutput" readonly></textarea>
+<script src="https://cdn.jsdelivr.net/npm/jsonata/jsonata.min.js"></script>
+<script>
+const expression = `{
+  "messageType": "GB.D365EventProcessor.D365EventTransformed.ProductionOrderWithdrawn",
+  "timestamp": $join([FXLHeader.SystemDate, "T", FXLHeader.SystemTime, ".000Z"]),
+  "productionId": ProdTable.FIELD_ProdTable_ProdId,
+  "productionStatus": ProdTable.FIELD_ProdTable_ProdStatus,
+  "productionStatusDescription": ProdTable.FIELD_ProdTable_ProdStatus1,
+  "site": ProdTable.FIELD_ProdTable_inventDim_InventSiteId,
+  "warehouse": ProdTable.FIELD_ProdTable_inventDim_InventLocationId
+}`;
+
+const transform = jsonata(expression);
+
+document.getElementById('transformButton').addEventListener('click', () => {
+  const inputText = document.getElementById('csvInput').value.trim();
+  const lines = inputText.split(/\r?\n/).filter(line => line.trim());
+  if(lines.length && lines[0].startsWith('"timestamp"')) {
+    lines.shift();
+  }
+  const results = [];
+  for (const line of lines) {
+    const comma = line.indexOf(',');
+    if (comma === -1) continue;
+    let jsonPart = line.slice(comma + 1).trim();
+    if (jsonPart.startsWith('"') && jsonPart.endsWith('"')) {
+      jsonPart = jsonPart.slice(1, -1);
+    }
+    try {
+      const message = JSON.parse(jsonPart);
+      const result = transform.evaluate(message);
+      results.push(JSON.stringify(result, null, 2));
+    } catch(e) {
+      results.push(`Fehler bei Zeile: ${line}\n${e}`);
+    }
+  }
+  document.getElementById('jsonOutput').value = results.join('\n\n');
+});
+</script>
+</body>
+</html>
