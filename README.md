@@ -12,3 +12,11 @@ Diese kleine Anwendung erlaubt es, mehrere CSV-Zeilen einzufügen, die jeweils e
    Über den **Kopieren**-Knopf in jeder Tabellenzeile kann das jeweilige JSON in die Zwischenablage übernommen werden.
 
 Die Transformation erzeugt für jede Zeile ein JSON mit umfangreichen Informationen zum Produktionsauftrag.
+
+Alternativ kann die Transformation auch auf der Kommandozeile erfolgen:
+
+```
+cat eingabe.csv | python csv_transform.py
+```
+
+Dabei wird für jede Zeile der CSV-Datei das JSON transformiert und als Liste von Objekten ausgegeben.
