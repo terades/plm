@@ -35,6 +35,13 @@
   <button id="transformButton" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-8">Transformieren</button>
 
   <h2 class="text-2xl font-bold mb-4">Ausgabe</h2>
+  <div id="filterBar" class="grid grid-cols-5 gap-4 mb-4">
+    <select id="filterProductionId" class="p-2 border rounded" title="productionId"></select>
+    <select id="filterProject" class="p-2 border rounded" title="project"></select>
+    <select id="filterItemNumber" class="p-2 border rounded" title="itemNumber"></select>
+    <select id="filterResource" class="p-2 border rounded" title="resource"></select>
+    <input id="filterFreeText" type="text" placeholder="Freitext" class="p-2 border rounded" />
+  </div>
   <div class="overflow-hidden border border-gray-200 rounded-lg shadow-md">
     <table id="resultsTable" class="w-full table-auto border-collapse">
       <thead class="bg-gray-100">
@@ -165,6 +172,7 @@ const expression = `{
 }`;
 
 const transform = jsonata(expression);
+let resultsCache = [];
 
 // Wandelt einen JSON-String in HTML mit einfachen Farben um
 function syntaxHighlight(json) {
@@ -185,55 +193,50 @@ function syntaxHighlight(json) {
   });
 }
 
-function processCsv(text) {
+function populateFilters() {
+  const prod = new Set();
+  const proj = new Set();
+  const item = new Set();
+  const res = new Set();
+  resultsCache.forEach(r => {
+    if (!r.data) return;
+    if (r.data.productionId) prod.add(r.data.productionId);
+    if (r.data.project) proj.add(r.data.project);
+    if (r.data.itemNumber) item.add(r.data.itemNumber);
+    if (r.data.resource) res.add(r.data.resource);
+  });
+
+  const fill = (id, values) => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Alle</option>';
+    Array.from(values).sort().forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      sel.appendChild(opt);
+    });
+    if (current && [...values].includes(current)) sel.value = current;
+  };
+
+  fill('filterProductionId', prod);
+  fill('filterProject', proj);
+  fill('filterItemNumber', item);
+  fill('filterResource', res);
+}
+
+function buildTable() {
   const tbody = document.querySelector('#resultsTable tbody');
   tbody.innerHTML = '';
-
-  const rawLines = text.trim().split(/\r?\n/);
-  const logicalLines = [];
-  let currentLogicalLine = "";
-
-  for (const rawLine of rawLines) {
-    const isNewRecord = rawLine.startsWith('"timestamp"') || /^\d{4}-\d{2}-\d{2}/.test(rawLine.trim());
-
-    if (isNewRecord && currentLogicalLine !== "") {
-      logicalLines.push(currentLogicalLine);
-      currentLogicalLine = rawLine;
-    } else {
-      currentLogicalLine += (currentLogicalLine ? "\n" : "") + rawLine;
-    }
-  }
-  if (currentLogicalLine !== "") {
-    logicalLines.push(currentLogicalLine);
-  }
-
-  if (logicalLines.length > 0 && logicalLines[0].startsWith('"timestamp"')) {
-    logicalLines.shift();
-  }
-
-  logicalLines.forEach((line, idx) => {
-    const commaIndex = line.indexOf(',');
-    if (commaIndex === -1) return;
-
-    let jsonPart = line.substring(commaIndex + 1).trim();
-
-    if (jsonPart.startsWith('"') && jsonPart.endsWith('"')) {
-      jsonPart = jsonPart.slice(1, -1);
-    }
-    
-    jsonPart = jsonPart.replace(/""/g, '"');
-    
-    let formatted;
-    try {
-      const message = JSON.parse(jsonPart);
-      const result = transform.evaluate(message);
-      formatted = JSON.stringify(result, null, 2);
-    } catch (e) {
-      formatted = `Fehler beim Verarbeiten von Zeile ${idx + 1}:\n${e.message}\n\n--- Problemhafter JSON-Teil (nach Bereinigung) ---\n${jsonPart}`;
-    }
-
+  resultsCache.forEach((entry, idx) => {
+    const { formatted, data } = entry;
     const tr = document.createElement('tr');
     tr.className = 'align-top bg-white even:bg-gray-50';
+    tr.dataset.productionid = (data?.productionId || '').toString();
+    tr.dataset.project = (data?.project || '').toString();
+    tr.dataset.itemnumber = (data?.itemNumber || '').toString();
+    tr.dataset.resource = (data?.resource || '').toString();
+    tr.dataset.json = formatted.toLowerCase();
 
     const tdIndex = document.createElement('td');
     tdIndex.className = 'border-b border-gray-200 p-3 text-center text-gray-500';
@@ -241,20 +244,16 @@ function processCsv(text) {
 
     const tdJson = document.createElement('td');
     tdJson.className = 'border-b border-gray-200 p-3';
-
     const toggle = document.createElement('button');
     toggle.className = 'mr-2 text-blue-600 font-bold focus:outline-none';
     toggle.textContent = '▶';
-
     const pre = document.createElement('pre');
     pre.className = 'text-sm text-gray-700 collapsed syntax-highlight';
     pre.innerHTML = syntaxHighlight(formatted);
-
     toggle.addEventListener('click', () => {
       pre.classList.toggle('collapsed');
       toggle.textContent = pre.classList.contains('collapsed') ? '▶' : '▼';
     });
-
     tdJson.appendChild(toggle);
     tdJson.appendChild(pre);
 
@@ -281,6 +280,79 @@ function processCsv(text) {
   });
 }
 
+function applyFilters() {
+  const prod = document.getElementById('filterProductionId').value.toLowerCase();
+  const proj = document.getElementById('filterProject').value.toLowerCase();
+  const item = document.getElementById('filterItemNumber').value.toLowerCase();
+  const res = document.getElementById('filterResource').value.toLowerCase();
+  const text = document.getElementById('filterFreeText').value.toLowerCase();
+
+  document.querySelectorAll('#resultsTable tbody tr').forEach(tr => {
+    const matchesProd = !prod || tr.dataset.productionid.toLowerCase() === prod;
+    const matchesProj = !proj || tr.dataset.project.toLowerCase() === proj;
+    const matchesItem = !item || tr.dataset.itemnumber.toLowerCase() === item;
+    const matchesRes = !res || tr.dataset.resource.toLowerCase() === res;
+    const matchesText = !text || tr.dataset.json.includes(text);
+    tr.style.display = (matchesProd && matchesProj && matchesItem && matchesRes && matchesText) ? '' : 'none';
+  });
+}
+
+function processCsv(text) {
+  const rawLines = text.trim().split(/\r?\n/);
+  const logicalLines = [];
+  let currentLogicalLine = "";
+
+  for (const rawLine of rawLines) {
+    const isNewRecord = rawLine.startsWith('"timestamp"') || /^\d{4}-\d{2}-\d{2}/.test(rawLine.trim());
+
+    if (isNewRecord && currentLogicalLine !== "") {
+      logicalLines.push(currentLogicalLine);
+      currentLogicalLine = rawLine;
+    } else {
+      currentLogicalLine += (currentLogicalLine ? "\n" : "") + rawLine;
+    }
+  }
+  if (currentLogicalLine !== "") {
+    logicalLines.push(currentLogicalLine);
+  }
+
+  if (logicalLines.length > 0 && logicalLines[0].startsWith('"timestamp"')) {
+    logicalLines.shift();
+  }
+
+  resultsCache = [];
+
+  logicalLines.forEach((line) => {
+    const commaIndex = line.indexOf(',');
+    if (commaIndex === -1) return;
+
+    let jsonPart = line.substring(commaIndex + 1).trim();
+
+    if (jsonPart.startsWith('"') && jsonPart.endsWith('"')) {
+      jsonPart = jsonPart.slice(1, -1);
+    }
+
+    jsonPart = jsonPart.replace(/""/g, '"');
+
+    let formatted;
+    let data;
+    try {
+      const message = JSON.parse(jsonPart);
+      data = transform.evaluate(message);
+      formatted = JSON.stringify(data, null, 2);
+    } catch (e) {
+      formatted = `Fehler beim Verarbeiten von Zeile ${resultsCache.length + 1}:\n${e.message}\n\n--- Problemhafter JSON-Teil (nach Bereinigung) ---\n${jsonPart}`;
+      data = null;
+    }
+
+    resultsCache.push({ formatted, data });
+  });
+
+  populateFilters();
+  buildTable();
+  applyFilters();
+}
+
 document.getElementById('transformButton').addEventListener('click', () => {
   const inputText = document.getElementById('csvInput').value;
   processCsv(inputText);
@@ -296,6 +368,10 @@ document.getElementById('csvFile').addEventListener('change', (e) => {
     processCsv(text);
   };
   reader.readAsText(file);
+});
+
+document.querySelectorAll('#filterBar select, #filterFreeText').forEach(el => {
+  el.addEventListener('input', applyFilters);
 });
 </script>
 </body>
