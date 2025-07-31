@@ -43,6 +43,7 @@
     <select id="filterResource" multiple placeholder="resource" class="w-full p-2 border rounded"></select>
     <input id="filterFreeText" type="text" placeholder="Freitext" class="p-2 border rounded" />
   </div>
+  <p id="rowCount" class="mb-2 text-gray-600"></p>
   <div class="overflow-hidden border border-gray-200 rounded-lg shadow-md">
     <table id="resultsTable" class="w-full table-auto border-collapse">
       <thead class="bg-gray-100">
@@ -212,6 +213,11 @@ function syntaxHighlight(json) {
 function createOptions(selectId, values) {
   const field = filterMap[selectId];
   const select = document.getElementById(selectId);
+
+  if (select.tomselect) {
+    select.tomselect.destroy();
+  }
+
   select.innerHTML = '';
   selectedFilters[field].clear();
 
@@ -221,10 +227,6 @@ function createOptions(selectId, values) {
     opt.textContent = v;
     select.appendChild(opt);
   });
-
-  if (select.tomselect) {
-    select.tomselect.destroy();
-  }
 
   new TomSelect(select, {
     plugins: ['remove_button'],
@@ -324,6 +326,13 @@ function applyFilters() {
     const matchesText = !text || tr.dataset.json.includes(text);
     tr.style.display = (matchesProd && matchesProj && matchesItem && matchesRes && matchesText) ? '' : 'none';
   });
+  updateRowCount();
+}
+
+function updateRowCount() {
+  const visible = Array.from(document.querySelectorAll('#resultsTable tbody tr'))
+    .filter(tr => tr.style.display !== 'none').length;
+  document.getElementById('rowCount').textContent = `Sichtbare Zeilen: ${visible}`;
 }
 
 function processCsv(text) {
