@@ -27,7 +27,7 @@ const expression = `{
   "partGrossDepth": $number(ProdTable.FIELD_ProdTable_inventTable_grossDepth),
   "partGrossWeight": $number(ProdTable.FIELD_ProdTable_inventTable_grossWeight),
   "partGrossVolume": $number(ProdTable.FIELD_ProdTable_inventTable_grossVolume),
-  "resource": ProdTable.ProdRoute.ProdRouteJob[0].FIELD_ProdRouteJob_WrkCtrId,
+  "resource": $trim($split(ProdTable.ProdRoute.ProdRouteJob[0].FIELD_ProdRouteJob_WrkCtrId, ",")[0]),
   "orderNumber": ProdTable.FIELD_ProdTable_GLDICSalesId ? ProdTable.FIELD_ProdTable_GLDICSalesId : null,
   "mesColor": ProdTable.FIELD_ProdTable_GLDColor,
   "mesCoatingType": ProdTable.FIELD_ProdTable_GLDCoatingType,
