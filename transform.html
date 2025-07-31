@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Produktionsauftrag Transformation</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.css">
 <style>
   /* Stellt sicher, dass der JSON-Inhalt korrekt umgebrochen wird */
   pre {
@@ -36,22 +37,10 @@
 
   <h2 class="text-2xl font-bold mb-4">Ausgabe</h2>
   <div id="filterBar" class="grid grid-cols-5 gap-4 mb-4">
-    <div id="filterProductionId" class="filter-group p-2 border rounded">
-      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="productionId" />
-      <div class="filter-options flex flex-wrap gap-1"></div>
-    </div>
-    <div id="filterProject" class="filter-group p-2 border rounded">
-      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="project" />
-      <div class="filter-options flex flex-wrap gap-1"></div>
-    </div>
-    <div id="filterItemNumber" class="filter-group p-2 border rounded">
-      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="itemNumber" />
-      <div class="filter-options flex flex-wrap gap-1"></div>
-    </div>
-    <div id="filterResource" class="filter-group p-2 border rounded">
-      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="resource" />
-      <div class="filter-options flex flex-wrap gap-1"></div>
-    </div>
+    <select id="filterProductionId" multiple placeholder="productionId" class="w-full p-2 border rounded"></select>
+    <select id="filterProject" multiple placeholder="project" class="w-full p-2 border rounded"></select>
+    <select id="filterItemNumber" multiple placeholder="itemNumber" class="w-full p-2 border rounded"></select>
+    <select id="filterResource" multiple placeholder="resource" class="w-full p-2 border rounded"></select>
     <input id="filterFreeText" type="text" placeholder="Freitext" class="p-2 border rounded" />
   </div>
   <div class="overflow-hidden border border-gray-200 rounded-lg shadow-md">
@@ -70,6 +59,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsonata@1.8.6/jsonata.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
 <script>
 // Die JSONata-Expression wird hier korrigiert.
 const expression = `{
@@ -219,50 +209,30 @@ function syntaxHighlight(json) {
   });
 }
 
-function createOptions(containerId, values) {
-  const field = filterMap[containerId];
-  const container = document.getElementById(containerId);
-  const search = container.querySelector('.filter-search');
-  const optionsDiv = container.querySelector('.filter-options');
-  optionsDiv.innerHTML = '';
+function createOptions(selectId, values) {
+  const field = filterMap[selectId];
+  const select = document.getElementById(selectId);
+  select.innerHTML = '';
   selectedFilters[field].clear();
 
   Array.from(values).sort().forEach(v => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.dataset.value = v;
-    btn.textContent = v;
-    btn.className = 'px-2 py-1 border rounded text-sm bg-white';
-    btn.addEventListener('click', () => {
-      const set = selectedFilters[field];
-      if (set.has(v)) {
-        set.delete(v);
-        btn.classList.remove('bg-blue-500', 'text-white');
-      } else {
-        set.add(v);
-        btn.classList.add('bg-blue-500', 'text-white');
-      }
-      applyFilters();
-    });
-    optionsDiv.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
   });
 
-  search.value = '';
-  search.oninput = () => {
-    const val = search.value.toLowerCase();
-    selectedFilters[field].clear();
-    optionsDiv.querySelectorAll('button').forEach(b => {
-      const match = b.dataset.value.toLowerCase().includes(val);
-      b.style.display = match ? '' : 'none';
-      if (match && val) {
-        b.classList.add('bg-blue-500', 'text-white');
-        selectedFilters[field].add(b.dataset.value);
-      } else {
-        b.classList.remove('bg-blue-500', 'text-white');
-      }
-    });
-    applyFilters();
-  };
+  if (select.tomselect) {
+    select.tomselect.destroy();
+  }
+
+  new TomSelect(select, {
+    plugins: ['remove_button'],
+    onChange: () => {
+      selectedFilters[field] = new Set(select.tomselect.getValue());
+      applyFilters();
+    }
+  });
 }
 
 function populateFilters() {
