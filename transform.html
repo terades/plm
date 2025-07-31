@@ -36,10 +36,22 @@
 
   <h2 class="text-2xl font-bold mb-4">Ausgabe</h2>
   <div id="filterBar" class="grid grid-cols-5 gap-4 mb-4">
-    <select id="filterProductionId" class="p-2 border rounded" title="productionId"></select>
-    <select id="filterProject" class="p-2 border rounded" title="project"></select>
-    <select id="filterItemNumber" class="p-2 border rounded" title="itemNumber"></select>
-    <select id="filterResource" class="p-2 border rounded" title="resource"></select>
+    <div id="filterProductionId" class="filter-group p-2 border rounded">
+      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="productionId" />
+      <div class="filter-options flex flex-wrap gap-1"></div>
+    </div>
+    <div id="filterProject" class="filter-group p-2 border rounded">
+      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="project" />
+      <div class="filter-options flex flex-wrap gap-1"></div>
+    </div>
+    <div id="filterItemNumber" class="filter-group p-2 border rounded">
+      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="itemNumber" />
+      <div class="filter-options flex flex-wrap gap-1"></div>
+    </div>
+    <div id="filterResource" class="filter-group p-2 border rounded">
+      <input type="text" class="filter-search p-1 border rounded w-full mb-1" placeholder="resource" />
+      <div class="filter-options flex flex-wrap gap-1"></div>
+    </div>
     <input id="filterFreeText" type="text" placeholder="Freitext" class="p-2 border rounded" />
   </div>
   <div class="overflow-hidden border border-gray-200 rounded-lg shadow-md">
@@ -174,6 +186,20 @@ const expression = `{
 const transform = jsonata(expression);
 let resultsCache = [];
 
+const filterMap = {
+  filterProductionId: 'productionId',
+  filterProject: 'project',
+  filterItemNumber: 'itemNumber',
+  filterResource: 'resource'
+};
+
+const selectedFilters = {
+  productionId: new Set(),
+  project: new Set(),
+  itemNumber: new Set(),
+  resource: new Set()
+};
+
 // Wandelt einen JSON-String in HTML mit einfachen Farben um
 function syntaxHighlight(json) {
   json = json
@@ -193,6 +219,52 @@ function syntaxHighlight(json) {
   });
 }
 
+function createOptions(containerId, values) {
+  const field = filterMap[containerId];
+  const container = document.getElementById(containerId);
+  const search = container.querySelector('.filter-search');
+  const optionsDiv = container.querySelector('.filter-options');
+  optionsDiv.innerHTML = '';
+  selectedFilters[field].clear();
+
+  Array.from(values).sort().forEach(v => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.value = v;
+    btn.textContent = v;
+    btn.className = 'px-2 py-1 border rounded text-sm bg-white';
+    btn.addEventListener('click', () => {
+      const set = selectedFilters[field];
+      if (set.has(v)) {
+        set.delete(v);
+        btn.classList.remove('bg-blue-500', 'text-white');
+      } else {
+        set.add(v);
+        btn.classList.add('bg-blue-500', 'text-white');
+      }
+      applyFilters();
+    });
+    optionsDiv.appendChild(btn);
+  });
+
+  search.value = '';
+  search.oninput = () => {
+    const val = search.value.toLowerCase();
+    selectedFilters[field].clear();
+    optionsDiv.querySelectorAll('button').forEach(b => {
+      const match = b.dataset.value.toLowerCase().includes(val);
+      b.style.display = match ? '' : 'none';
+      if (match && val) {
+        b.classList.add('bg-blue-500', 'text-white');
+        selectedFilters[field].add(b.dataset.value);
+      } else {
+        b.classList.remove('bg-blue-500', 'text-white');
+      }
+    });
+    applyFilters();
+  };
+}
+
 function populateFilters() {
   const prod = new Set();
   const proj = new Set();
@@ -206,23 +278,10 @@ function populateFilters() {
     if (r.data.resource) res.add(r.data.resource);
   });
 
-  const fill = (id, values) => {
-    const sel = document.getElementById(id);
-    const current = sel.value;
-    sel.innerHTML = '<option value="">Alle</option>';
-    Array.from(values).sort().forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = v;
-      sel.appendChild(opt);
-    });
-    if (current && [...values].includes(current)) sel.value = current;
-  };
-
-  fill('filterProductionId', prod);
-  fill('filterProject', proj);
-  fill('filterItemNumber', item);
-  fill('filterResource', res);
+  createOptions('filterProductionId', prod);
+  createOptions('filterProject', proj);
+  createOptions('filterItemNumber', item);
+  createOptions('filterResource', res);
 }
 
 function buildTable() {
@@ -281,17 +340,17 @@ function buildTable() {
 }
 
 function applyFilters() {
-  const prod = document.getElementById('filterProductionId').value.toLowerCase();
-  const proj = document.getElementById('filterProject').value.toLowerCase();
-  const item = document.getElementById('filterItemNumber').value.toLowerCase();
-  const res = document.getElementById('filterResource').value.toLowerCase();
   const text = document.getElementById('filterFreeText').value.toLowerCase();
+  const prod = selectedFilters.productionId;
+  const proj = selectedFilters.project;
+  const item = selectedFilters.itemNumber;
+  const res = selectedFilters.resource;
 
   document.querySelectorAll('#resultsTable tbody tr').forEach(tr => {
-    const matchesProd = !prod || tr.dataset.productionid.toLowerCase() === prod;
-    const matchesProj = !proj || tr.dataset.project.toLowerCase() === proj;
-    const matchesItem = !item || tr.dataset.itemnumber.toLowerCase() === item;
-    const matchesRes = !res || tr.dataset.resource.toLowerCase() === res;
+    const matchesProd = prod.size === 0 || prod.has(tr.dataset.productionid);
+    const matchesProj = proj.size === 0 || proj.has(tr.dataset.project);
+    const matchesItem = item.size === 0 || item.has(tr.dataset.itemnumber);
+    const matchesRes = res.size === 0 || res.has(tr.dataset.resource);
     const matchesText = !text || tr.dataset.json.includes(text);
     tr.style.display = (matchesProd && matchesProj && matchesItem && matchesRes && matchesText) ? '' : 'none';
   });
@@ -370,9 +429,7 @@ document.getElementById('csvFile').addEventListener('change', (e) => {
   reader.readAsText(file);
 });
 
-document.querySelectorAll('#filterBar select, #filterFreeText').forEach(el => {
-  el.addEventListener('input', applyFilters);
-});
+document.getElementById('filterFreeText').addEventListener('input', applyFilters);
 </script>
 </body>
 </html>
