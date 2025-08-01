@@ -77,12 +77,19 @@
         /* Tag Input Styling */
         .tag-input-container {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
+            flex-direction: column;
         }
 
         .tag-input-container input {
             min-width: 8rem;
+            width: 100%;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
         }
 
         .tag-item {
@@ -397,7 +404,8 @@
                     <div>
                         <label for="productIdsInput" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Produkt IDs</label>
                         <div id="productIdsContainer" class="tag-input-container input-style p-2 block w-full rounded-lg shadow-sm">
-                            <input id="productIdsInput" type="text" class="tag-input bg-transparent focus:outline-none flex-grow" placeholder="ID eingeben und Enter drücken">
+                            <input id="productIdsInput" type="text" class="tag-input bg-transparent focus:outline-none" placeholder="ID eingeben und Enter drücken">
+                            <div id="productIdTags" class="tag-list"></div>
                         </div>
                         <input type="hidden" id="productIds" value="BLVSC3">
                     </div>
@@ -918,6 +926,7 @@
             const productIdsHidden = document.getElementById('productIds');
             const productIdsInput = document.getElementById('productIdsInput');
             const productIdsContainer = document.getElementById('productIdsContainer');
+            const productIdTagsDiv = document.getElementById('productIdTags');
             let productIdTags = [];
 
             function updateProductIdsField() {
@@ -936,11 +945,11 @@
                 btn.textContent = '×';
                 btn.addEventListener('click', () => {
                     productIdTags = productIdTags.filter(v => v !== val);
-                    productIdsContainer.removeChild(tag);
+                    productIdTagsDiv.removeChild(tag);
                     updateProductIdsField();
                 });
                 tag.appendChild(btn);
-                productIdsContainer.insertBefore(tag, productIdsInput);
+                productIdTagsDiv.appendChild(tag);
                 updateProductIdsField();
             }
 
