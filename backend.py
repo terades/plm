@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 # Importieren Sie Ihre bewährte D365InventoryClient-Klasse
 from datetime import datetime, timedelta
@@ -90,7 +90,7 @@ class D365InventoryClient:
 # Pydantic-Modell für die eingehenden Daten von der Webseite
 class QueryFilters(BaseModel):
     organizationId: str
-    productId: str
+    productIds: list[str]
     siteId: str
     locationId: str
     WMSLocationId: str
@@ -124,7 +124,7 @@ async def get_inventory(filters: QueryFilters):
             "dimensionDataSource": "fno",
             "filters": {
                 "organizationId": [all_vals["organizationId"]],
-                "productId": [all_vals["productId"]],
+                "productId": all_vals["productIds"],
                 "dimensions": active_dimensions,
                 "values": [active_values]
             },
