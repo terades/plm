@@ -170,8 +170,3 @@ if __name__ == "__main__":
     # Stellen Sie sicher, dass die Umgebungsvariablen gesetzt sind, bevor Sie dies ausführen
     uvicorn.run("backend:app", host="127.0.0.1", port=8000, reload=True)
 
-    #STARTSCRIPT#STARTSCRIPT#STARTSCRIPT#STARTSCRIPT
-    #AZ-LOGIN erstmal!!
-    #cd C:/Users/ideke/Python/d365/UI
-    #python -m uvicorn backend:app --reload
-
