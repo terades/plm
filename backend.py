@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 # Importieren Sie Ihre bewährte D365InventoryClient-Klasse
 from datetime import datetime, timedelta
