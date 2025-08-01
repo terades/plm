@@ -21,7 +21,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class D365InventoryClient:
     def __init__(self):
         self.key_vault_url = os.getenv("AZURE_KEY_VAULT_URL")
-        if not self.key_vault_url: raise ValueError("AZURE_KEY_VAULT_URL Umgebungsvariable nicht gesetzt.")
+        if not self.key_vault_url:
+            raise ValueError("AZURE_KEY_VAULT_URL Umgebungsvariable nicht gesetzt.")
         
         logging.info(f"Verwende Key Vault: {self.key_vault_url}")
         
