@@ -89,17 +89,25 @@ class D365InventoryClient:
 
 # Pydantic-Modell für die eingehenden Daten von der Webseite
 class QueryFilters(BaseModel):
-    organizationId: str
-    productIds: list[str]
-    siteId: str
-    locationId: str
-    WMSLocationId: str
-    InventStatusId: str
-    ConfigId: str
-    SizeId: str
-    ColorId: str
-    StyleId: str
-    BatchId: str
+    """Eingabedaten der Abfrage.
+
+    Viele Felder sind optional, um auch unvollständige Formulare annehmen zu
+    können. Dadurch löst die Request-Validierung keinen 422 Fehler mehr aus,
+    wenn einzelne Werte leer gelassen werden. Produkt-IDs werden als Liste
+    übergeben und standardmäßig zu einer leeren Liste initialisiert.
+    """
+
+    organizationId: Optional[str] = None
+    productIds: List[str] = []
+    siteId: Optional[str] = None
+    locationId: Optional[str] = None
+    WMSLocationId: Optional[str] = None
+    InventStatusId: Optional[str] = None
+    ConfigId: Optional[str] = None
+    SizeId: Optional[str] = None
+    ColorId: Optional[str] = None
+    StyleId: Optional[str] = None
+    BatchId: Optional[str] = None
 
 # FastAPI-Anwendung initialisieren
 # WICHTIG: Diese Zeile steht auf der obersten Ebene (nicht eingerückt)
