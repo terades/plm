@@ -143,10 +143,6 @@ async def get_inventory(filters: QueryFilters):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Statische Dateien (HTML, CSS, JS) bereitstellen
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Hauptseite (index.html) bereitstellen
 # Basisverzeichnis des Skripts bestimmen
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
