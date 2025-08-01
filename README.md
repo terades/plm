@@ -13,6 +13,18 @@ uvicorn backend:app --reload
 
 Alternativ kann auch `python backend.py` verwendet werden.
 
+## Voraussetzungen
+
+Vor dem Start muessen die benoetigten Python-Bibliotheken installiert sein.
+Dies kann mit `pip` erledigt werden:
+
+```bash
+pip install fastapi uvicorn requests azure-identity azure-keyvault-secrets
+```
+
+Ohne diese Pakete laesst sich der Server nicht starten, was typischerweise zu
+einem Verbindungsfehler wie `net::ERR_CONNECTION_REFUSED` im Browser fuehrt.
+
 ## Benötigte Umgebungsvariablen
 
 Für die Anbindung an Azure muss mindestens die URL
