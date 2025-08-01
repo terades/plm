@@ -367,8 +367,8 @@
                 </h2>
                 <div class="space-y-5">
                     <div>
-                        <label for="productId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Produkt ID</label>
-                        <input type="text" id="productId" value="BLVSC3" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                        <label for="productIds" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Produkt IDs</label>
+                        <textarea id="productIds" rows="3" class="input-style p-3 block w-full rounded-lg shadow-sm" placeholder="Mehrere IDs mit Komma oder Zeilenumbruch trennen">BLVSC3</textarea>
                     </div>
                     <div>
                         <label for="ConfigId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Variante</label>
@@ -883,7 +883,7 @@
             const copyJsonButton = document.getElementById('copyJsonButton');
             const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
             
-            const inputIds = ['organizationId', 'productId', 'siteId', 'locationId', 'WMSLocationId', 'InventStatusId', 'ConfigId', 'SizeId', 'ColorId', 'StyleId', 'BatchId'];
+            const inputIds = ['organizationId', 'productIds', 'siteId', 'locationId', 'WMSLocationId', 'InventStatusId', 'ConfigId', 'SizeId', 'ColorId', 'StyleId', 'BatchId'];
 
             // --- Event Listeners ---
             queryButton.addEventListener('click', handleQuery);
@@ -949,12 +949,21 @@
                 exportButton.disabled = true;
                 
                 const filters = {};
-                inputIds.forEach(id => { 
+                inputIds.forEach(id => {
                     const element = document.getElementById(id);
                     if (element) {
-                        filters[id] = element.value; 
+                        filters[id] = element.value;
                     }
                 });
+
+                if (filters.productIds) {
+                    filters.productIds = filters.productIds
+                        .split(/[,\n]+/)
+                        .map(v => v.trim())
+                        .filter(v => v);
+                } else {
+                    filters.productIds = [];
+                }
                 
                 const active_dimensions = [], active_values = [];
                 const dimension_keys = ["siteId", "locationId", "WMSLocationId", "ConfigId", "SizeId", "ColorId", "StyleId", "InventStatusId", "BatchId"];
@@ -969,11 +978,11 @@
                 
                 lastSentPayload = {
                     "dimensionDataSource": "fno",
-                    "filters": { 
-                        "organizationId": [filters.organizationId], 
-                        "productId": [filters.productId], 
-                        "dimensions": active_dimensions, 
-                        "values": [active_values] 
+                    "filters": {
+                        "organizationId": [filters.organizationId],
+                        "productId": filters.productIds,
+                        "dimensions": active_dimensions,
+                        "values": [active_values]
                     },
                     "groupByValues": dimension_keys,
                     "returnNegative": true
