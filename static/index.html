@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D365 Inventory Abfrage</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Verbessertes Dark Mode Farbschema */
+        :root {
+            /* Light Mode Variablen */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-tertiary: #64748b;
+            --border-primary: #e2e8f0;
+            --border-secondary: #cbd5e1;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #1d4ed8;
+        }
+
+        .dark {
+            /* Dark Mode Variablen - deutlich bessere Kontraste */
+            --bg-primary: #0f172a;      /* Sehr dunkler Blauton */
+            --bg-secondary: #1e293b;    /* Dunkler Slate */
+            --bg-tertiary: #334155;     /* Mittlerer Slate */
+            --text-primary: #f1f5f9;    /* Sehr helles Grau */
+            --text-secondary: #cbd5e1;  /* Helles Grau */
+            --text-tertiary: #94a3b8;   /* Mittleres Grau */
+            --border-primary: #475569;  /* Dunkelgrau */
+            --border-secondary: #64748b; /* Mittleres Grau */
+            --accent-primary: #60a5fa;  /* Helleres Blau */
+            --accent-secondary: #3b82f6; /* Standard Blau */
+        }
+
+        /* Globale Styles mit CSS-Variablen */
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Container und Cards */
+        .container-bg {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-primary);
+        }
+
+        .card-bg {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-primary);
+        }
+
+        /* Input Styling */
+        .input-style {
+            background-color: var(--bg-primary);
+            border-color: var(--border-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .input-style:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 1px var(--accent-primary);
+            outline: none;
+        }
+
+        .input-style::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* Button Styling */
+        .btn-primary {
+            background-color: var(--accent-primary);
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--accent-secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--border-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Tabellen Styling */
+        .table-container {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark .table-container {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        
+        .custom-table th {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .custom-table td {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-primary);
+            transition: background-color 0.2s ease;
+        }
+        
+        .custom-table tbody tr:nth-child(even) td {
+            background-color: var(--bg-secondary);
+        }
+        
+        .custom-table tbody tr:hover td {
+            background-color: var(--accent-primary);
+            color: white;
+            transform: scale(1.01);
+        }
+        
+        /* Filter Input Styling */
+        .filter-input {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-secondary);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            width: 100%;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        
+        .filter-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            outline: none;
+        }
+        
+        .filter-input::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        /* Pagination Styling */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+        }
+        
+        .pagination button {
+            padding: 0.5rem 0.875rem;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+        }
+        
+        .pagination button.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Status Messages */
+        .status-success {
+            color: #10b981;
+        }
+        
+        .status-error {
+            color: #ef4444;
+        }
+        
+        .status-info {
+            color: var(--text-tertiary);
+        }
+        
+        /* Modal Styling */
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .modal-footer {
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .code-block {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-secondary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+        
+        /* Animationen */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Focus Styles für Accessibility */
+        .focus-visible:focus {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+        
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            background-color: var(--bg-tertiary);
+        }
+        
+        .dark-mode-toggle.checked {
+            background-color: var(--accent-primary);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .custom-table th,
+            .custom-table td {
+                padding: 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+            
+            .pagination button {
+                padding: 0.375rem 0.625rem;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-bg p-6 min-h-screen transition-all duration-300">
+        
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold" style="color: var(--text-primary)">D365 Inventory Visibility Abfrage</h1>
+            <div class="flex items-center gap-3">
+                <i class="fas fa-sun text-yellow-500"></i>
+                <label for="dark-mode-toggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="dark-mode-toggle" class="sr-only peer">
+                    <div class="w-12 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 dark-mode-toggle"></div>
+                </label>
+                <i class="fas fa-moon" style="color: var(--text-tertiary)"></i>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Allgemeine Filter -->
+            <div class="card-bg p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-6 flex items-center" style="color: var(--text-primary)">
+                    <i class="fas fa-globe-europe mr-3" style="color: var(--accent-primary)"></i>
+                    Allgemeine Filter
+                </h2>
+                <div class="space-y-5">
+                    <div>
+                        <label for="organizationId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Org ID (Mandant)</label>
+                        <input type="text" id="organizationId" value="300" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="siteId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Standort</label>
+                        <input type="text" id="siteId" value="300" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="locationId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Lagerort</label>
+                        <input type="text" id="locationId" value="Bielefeld" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="WMSLocationId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Lagerplatz</label>
+                        <input type="text" id="WMSLocationId" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="InventStatusId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Bestandsstatus</label>
+                        <input type="text" id="InventStatusId" value="Available" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Produktdimensionen -->
+            <div class="card-bg p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-6 flex items-center" style="color: var(--text-primary)">
+                    <i class="fas fa-box-open mr-3" style="color: var(--accent-primary)"></i>
+                    Produktdimensionen
+                </h2>
+                <div class="space-y-5">
+                    <div>
+                        <label for="productId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Produkt ID</label>
+                        <input type="text" id="productId" value="BLVSC3" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="ConfigId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Variante</label>
+                        <input type="text" id="ConfigId" value="S320GD+ZM300/310" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="SizeId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Größe</label>
+                        <input type="text" id="SizeId" value="200" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="ColorId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Farbe</label>
+                        <input type="text" id="ColorId" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="StyleId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Stil</label>
+                        <input type="text" id="StyleId" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="BatchId" class="block text-sm font-medium mb-2" style="color: var(--text-secondary)">Charge</label>
+                        <input type="text" id="BatchId" class="input-style p-3 block w-full rounded-lg shadow-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="text-center my-8 space-x-4">
+            <button id="queryButton" class="btn-primary font-bold py-3 px-8 rounded-xl focus-visible inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+                <i class="fas fa-search mr-3"></i>
+                <span id="queryButtonText">Bestand abfragen</span>
+            </button>
+            <button id="showJsonButton" class="btn-secondary font-bold py-3 px-6 rounded-xl focus-visible inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed shadow-md" disabled>
+                <i class="fas fa-code mr-3"></i>
+                Zeige JSON
+            </button>
+            <button id="exportButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl focus-visible inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all duration-200" disabled>
+                <i class="fas fa-download mr-3"></i>
+                Export CSV
+            </button>
+        </div>
+        
+        <!-- Status Message -->
+        <div class="text-center mb-6">
+            <p id="status" class="status-info text-lg font-medium h-6"></p>
+        </div>
+
+        <!-- Table Controls -->
+        <div id="tableControls" class="hidden mb-6 card-bg p-4 rounded-xl shadow-md">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-3">
+                        <label for="pageSize" class="text-sm font-medium" style="color: var(--text-secondary)">Einträge pro Seite:</label>
+                        <select id="pageSize" class="input-style px-3 py-2 rounded-lg text-sm min-w-[80px]">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="-1">Alle</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label for="globalSearch" class="text-sm font-medium" style="color: var(--text-secondary)">Globale Suche:</label>
+                        <input type="text" id="globalSearch" placeholder="Durchsuchen..." class="input-style px-4 py-2 rounded-lg text-sm w-64">
+                    </div>
+                </div>
+                <div id="tableInfo" class="text-sm font-medium" style="color: var(--text-tertiary)"></div>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="table-container animate-fade-in">
+            <div class="overflow-x-auto">
+                <table id="resultsTable" class="custom-table">
+                    <thead>
+                        <tr id="headerRow"></tr>
+                        <tr id="filterRow"></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td class="text-center py-12" style="color: var(--text-tertiary)" colspan="100%">
+                                <i class="fas fa-database text-4xl mb-4 block"></i>
+                                Keine Daten verfügbar. Führen Sie eine Abfrage durch.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="pagination hidden"></div>
+    </div>
+    
+    <!-- JSON Modal -->
+    <div id="jsonModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="modal-content rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col mx-4">
+            <div class="modal-header flex justify-between items-center p-6">
+                <h3 class="text-xl font-semibold" style="color: var(--text-primary)">Gesendeter API-Payload</h3>
+                <button id="closeModalButton" class="btn-secondary p-2 rounded-lg hover:bg-red-500 hover:text-white transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <pre class="code-block p-4 rounded-lg overflow-x-auto"><code id="jsonPayloadContainer" class="text-sm"></code></pre>
+            </div>
+            <div class="modal-footer p-6 flex justify-end space-x-3">
+                <button id="copyJsonButton" class="btn-primary px-6 py-2 rounded-lg">
+                    <i class="fas fa-copy mr-2"></i>
+                    Kopieren
+                </button>
+                <button onclick="document.getElementById('closeModalButton').click()" class="btn-secondary px-6 py-2 rounded-lg">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================================================================================
+        // Lokale Tabellen-Implementation
+        // ===================================================================================
+
+        // Spalten-Mapping
+        const headerMapping = {
+            'organizationid': 'Mandant',
+            'productid': 'Produkt-ID',
+            'dimensions_configid': 'Variante',
+            'dimensions_sizeid': 'Größe',
+            'dimensions_colorid': 'Farbe',
+            'dimensions_styleid': 'Stil',
+            'dimensions_inventstatusid': 'Bestandsstatus',
+            'dimensions_siteid': 'Standort',
+            'dimensions_locationid': 'Lagerort',
+            'dimensions_wmslocationid': 'Lagerplatz',
+            'dimensions_batchid': 'Charge',
+            'quantities_fno_availordered': 'Verfügb. Bestellt (FNO)',
+            'quantities_fno_onorder': 'Bestellt (Einkauf)',
+            'quantities_fno_reservphysical': 'Physisch Reserviert',
+            'quantities_fno_postedqty': 'Gebuchte Menge',
+            'quantities_fno_physicalinvent': 'Physischer Bestand',
+            'quantities_fno_ordered': 'Bestellt (Verkauf)',
+            'quantities_fno_deducted': 'Abgebucht',
+            'quantities_fno_availphysical': 'Physisch Verfügbar',
+            'quantities_fno_arrived': 'Eingetroffen',
+            'quantities_fno_softreserved': 'Soft Reserviert',
+            'quantities_pos_inbound': 'Zulauf (POS)',
+            'quantities_pos_outbound': 'Abgang (POS)',
+            'quantities_pos_availquantity': 'Verfügbar (POS)',
+            'quantities_iv_ordered': 'Bestellt (IV)',
+            'quantities_iv_softreserved': 'Soft Reserviert (IV)',
+            'quantities_iv_totalonhand': 'Gesamtbestand (IV)',
+            'quantities_iv_availabletoreserve': 'Verfügbar f. Reserv.',
+            'quantities_iv_totalavailable': 'Gesamt Verfügbar (IV)',
+            'quantities_@iv_@allocated': '@Zugewiesen'
+        };
+
+        class LocalTable {
+            constructor() {
+                this.originalData = [];
+                this.filteredData = [];
+                this.sortColumn = null;
+                this.sortDirection = 'asc';
+                this.currentPage = 1;
+                this.pageSize = 25;
+                this.columns = [];
+                this.columnFilters = {};
+                this.globalFilter = '';
+                
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                document.getElementById('pageSize').addEventListener('change', (e) => {
+                    this.pageSize = parseInt(e.target.value);
+                    if (this.pageSize === -1) this.pageSize = this.filteredData.length;
+                    this.currentPage = 1;
+                    this.render();
+                });
+
+                document.getElementById('globalSearch').addEventListener('input', (e) => {
+                    this.globalFilter = e.target.value.toLowerCase();
+                    this.applyFilters();
+                    this.render();
+                });
+            }
+
+            flattenObject(obj, parentKey = '', res = {}) {
+                for (let key in obj) {
+                    const propName = parentKey ? parentKey.toLowerCase() + '_' + key.toLowerCase() : key.toLowerCase();
+                    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                        this.flattenObject(obj[key], propName, res);
+                    } else {
+                        res[propName] = obj[key];
+                    }
+                }
+                return res;
+            }
+
+            setData(data) {
+                if (!data || data.length === 0) {
+                    this.originalData = [];
+                    this.filteredData = [];
+                    this.columns = [];
+                    this.renderEmpty();
+                    document.getElementById('tableControls').classList.add('hidden');
+                    document.getElementById('pagination').classList.add('hidden');
+                    return;
+                }
+
+                this.originalData = data.map(item => this.flattenObject(item));
+                this.columns = Object.keys(this.originalData[0]);
+                this.columnFilters = {};
+                this.globalFilter = '';
+                this.currentPage = 1;
+                
+                this.applyFilters();
+                this.renderHeaders();
+                this.render();
+                
+                document.getElementById('tableControls').classList.remove('hidden');
+                document.getElementById('pagination').classList.remove('hidden');
+            }
+
+            applyFilters() {
+                this.filteredData = this.originalData.filter(row => {
+                    if (this.globalFilter) {
+                        const matchesGlobal = this.columns.some(col => {
+                            const value = row[col];
+                            return value && value.toString().toLowerCase().includes(this.globalFilter);
+                        });
+                        if (!matchesGlobal) return false;
+                    }
+
+                    for (const [column, filter] of Object.entries(this.columnFilters)) {
+                        if (filter) {
+                            const value = row[column];
+                            if (!value || !value.toString().toLowerCase().includes(filter.toLowerCase())) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                });
+
+                this.currentPage = 1;
+            }
+
+            renderHeaders() {
+                const headerRow = document.getElementById('headerRow');
+                const filterRow = document.getElementById('filterRow');
+                
+                headerRow.innerHTML = '';
+                filterRow.innerHTML = '';
+
+                this.columns.forEach(column => {
+                    // Header cell
+                    const th = document.createElement('th');
+                    th.innerHTML = `
+                        <div class="flex items-center justify-between cursor-pointer hover:opacity-75 transition-opacity">
+                            <span>${headerMapping[column.toLowerCase()] || column.replace('dimensions_', '')}</span>
+                            <i class="fas fa-sort text-sm opacity-50" data-column="${column}"></i>
+                        </div>
+                    `;
+                    th.addEventListener('click', () => this.sort(column));
+                    headerRow.appendChild(th);
+
+                    // Filter cell
+                    const filterTh = document.createElement('th');
+                    filterTh.style.padding = '0.5rem';
+                    const filterInput = document.createElement('input');
+                    filterInput.type = 'text';
+                    filterInput.placeholder = 'Filter...';
+                    filterInput.className = 'filter-input';
+                    filterInput.addEventListener('input', (e) => {
+                        this.columnFilters[column] = e.target.value;
+                        this.applyFilters();
+                        this.render();
+                    });
+                    filterTh.appendChild(filterInput);
+                    filterRow.appendChild(filterTh);
+                });
+            }
+
+            sort(column) {
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
+                }
+
+                this.filteredData.sort((a, b) => {
+                    let aVal = a[column] || '';
+                    let bVal = b[column] || '';
+
+                    if (!isNaN(aVal) && !isNaN(bVal)) {
+                        aVal = parseFloat(aVal);
+                        bVal = parseFloat(bVal);
+                    } else {
+                        aVal = aVal.toString().toLowerCase();
+                        bVal = bVal.toString().toLowerCase();
+                    }
+
+                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                this.renderHeaders();
+                this.render();
+            }
+
+            render() {
+                const tableBody = document.getElementById('tableBody');
+                const tableInfo = document.getElementById('tableInfo');
+                
+                if (this.filteredData.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td class="text-center py-12" style="color: var(--text-tertiary)" colspan="${this.columns.length}">
+                                <i class="fas fa-search text-4xl mb-4 block"></i>
+                                Keine Ergebnisse gefunden.
+                            </td>
+                        </tr>
+                    `;
+                    tableInfo.textContent = 'Keine Einträge';
+                    this.renderPagination();
+                    return;
+                }
+
+                const totalItems = this.filteredData.length;
+                const startIndex = (this.currentPage - 1) * this.pageSize;
+                const endIndex = this.pageSize === -1 ? totalItems : Math.min(startIndex + this.pageSize, totalItems);
+                const pageData = this.pageSize === -1 ? this.filteredData : this.filteredData.slice(startIndex, endIndex);
+
+                tableBody.innerHTML = pageData.map(row => {
+                    const cells = this.columns.map(column => {
+                        const value = row[column];
+                        return `<td>${value || ''}</td>`;
+                    }).join('');
+                    return `<tr class="transition-all duration-200">${cells}</tr>`;
+                }).join('');
+
+                tableInfo.textContent = `${startIndex + 1} bis ${endIndex} von ${totalItems} Einträgen`;
+                if (this.originalData.length !== totalItems) {
+                    tableInfo.textContent += ` (gefiltert von ${this.originalData.length} Einträgen)`;
+                }
+
+                this.renderPagination();
+            }
+
+            renderPagination() {
+                const pagination = document.getElementById('pagination');
+                const totalItems = this.filteredData.length;
+                const totalPages = this.pageSize === -1 ? 1 : Math.ceil(totalItems / this.pageSize);
+
+                if (totalPages <= 1) {
+                    pagination.classList.add('hidden');
+                    return;
+                }
+
+                pagination.classList.remove('hidden');
+                
+                const buttons = [];
+                
+                // Previous button
+                buttons.push(`
+                    <button ${this.currentPage === 1 ? 'disabled' : ''} onclick="table.goToPage(${this.currentPage - 1})">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                `);
+
+                // Page numbers
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(totalPages, this.currentPage + 2);
+
+                if (startPage > 1) {
+                    buttons.push(`<button onclick="table.goToPage(1)">1</button>`);
+                    if (startPage > 2) {
+                        buttons.push(`<span class="px-2" style="color: var(--text-tertiary)">...</span>`);
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    buttons.push(`
+                        <button onclick="table.goToPage(${i})" class="${i === this.currentPage ? 'active' : ''}">${i}</button>
+                    `);
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        buttons.push(`<span class="px-2" style="color: var(--text-tertiary)">...</span>`);
+                    }
+                    buttons.push(`<button onclick="table.goToPage(${totalPages})">${totalPages}</button>`);
+                }
+
+                // Next button
+                buttons.push(`
+                    <button ${this.currentPage === totalPages ? 'disabled' : ''} onclick="table.goToPage(${this.currentPage + 1})">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                `);
+
+                pagination.innerHTML = buttons.join('');
+            }
+
+            goToPage(page) {
+                const totalPages = this.pageSize === -1 ? 1 : Math.ceil(this.filteredData.length / this.pageSize);
+                if (page >= 1 && page <= totalPages) {
+                    this.currentPage = page;
+                    this.render();
+                }
+            }
+
+            renderEmpty() {
+                const headerRow = document.getElementById('headerRow');
+                const filterRow = document.getElementById('filterRow');
+                const tableBody = document.getElementById('tableBody');
+                
+                headerRow.innerHTML = '<th class="text-center">Info</th>';
+                filterRow.innerHTML = '<th></th>';
+                tableBody.innerHTML = `
+                    <tr>
+                        <td class="text-center py-12" style="color: var(--text-tertiary)">
+                            <i class="fas fa-database text-4xl mb-4 block"></i>
+                            Keine Daten verfügbar. Führen Sie eine Abfrage durch.
+                        </td>
+                    </tr>
+                `;
+            }
+
+            exportToCSV(filename = 'inventory_data.csv') {
+                if (!this.filteredData || this.filteredData.length === 0) {
+                    alert('Keine Daten zum Exportieren vorhanden.');
+                    return;
+                }
+
+                const headers = this.columns.map(col => headerMapping[col.toLowerCase()] || col);
+                const csvContent = [
+                    headers.join(','),
+                    ...this.filteredData.map(row => 
+                        this.columns.map(col => {
+                            const value = row[col] || '';
+                            return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
+                        }).join(',')
+                    )
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        }
+
+        // ===================================================================================
+        // Hauptanwendungslogik
+        // ===================================================================================
+
+        let table;
+        let currentData = [];
+        let lastSentPayload = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            table = new LocalTable();
+            
+            // --- Verbessertes Dark Mode System ---
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const htmlElement = document.documentElement;
+            
+            const applyTheme = (theme) => { 
+                if (theme === 'dark') { 
+                    htmlElement.classList.add('dark'); 
+                    darkModeToggle.checked = true;
+                } else { 
+                    htmlElement.classList.remove('dark'); 
+                    darkModeToggle.checked = false;
+                } 
+                
+                // Smooth transition für Theme-Wechsel
+                document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+                setTimeout(() => {
+                    document.body.style.transition = '';
+                }, 300);
+            };
+            
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(savedTheme);
+            
+            darkModeToggle.addEventListener('change', () => { 
+                const theme = darkModeToggle.checked ? 'dark' : 'light'; 
+                applyTheme(theme); 
+                localStorage.setItem('theme', theme); 
+            });
+
+            // --- UI Element References ---
+            const queryButton = document.getElementById('queryButton');
+            const queryButtonText = document.getElementById('queryButtonText');
+            const statusElement = document.getElementById('status');
+            const showJsonButton = document.getElementById('showJsonButton');
+            const exportButton = document.getElementById('exportButton');
+            const jsonModal = document.getElementById('jsonModal');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const copyJsonButton = document.getElementById('copyJsonButton');
+            const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
+            
+            const inputIds = ['organizationId', 'productId', 'siteId', 'locationId', 'WMSLocationId', 'InventStatusId', 'ConfigId', 'SizeId', 'ColorId', 'StyleId', 'BatchId'];
+
+            // --- Event Listeners ---
+            queryButton.addEventListener('click', handleQuery);
+            showJsonButton.addEventListener('click', showJsonModal);
+            exportButton.addEventListener('click', () => table.exportToCSV());
+            closeModalButton.addEventListener('click', hideJsonModal);
+            
+            copyJsonButton.addEventListener('click', () => {
+                if (lastSentPayload) {
+                    navigator.clipboard.writeText(JSON.stringify(lastSentPayload, null, 2)).then(() => {
+                        copyJsonButton.innerHTML = '<i class="fas fa-check mr-2"></i>Kopiert!';
+                        copyJsonButton.style.backgroundColor = '#10b981';
+                        setTimeout(() => {
+                            copyJsonButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Kopieren';
+                            copyJsonButton.style.backgroundColor = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Fehler beim Kopieren:', err);
+                    });
+                }
+            });
+            
+            jsonModal.addEventListener('click', (event) => { 
+                if (event.target === jsonModal) hideJsonModal(); 
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !jsonModal.classList.contains('hidden')) {
+                    hideJsonModal();
+                }
+            });
+
+            // --- Hilfsfunktionen ---
+            function showError(message, element = null) {
+                console.error('Fehler:', message);
+                if (element) {
+                    element.textContent = `❌ Fehler: ${message}`;
+                    element.className = 'status-error text-lg font-medium h-6';
+                }
+            }
+
+            function showSuccess(message, element = null) {
+                console.log('Erfolg:', message);
+                if (element) {
+                    element.textContent = `✅ ${message}`;
+                    element.className = 'status-success text-lg font-medium h-6';
+                }
+            }
+
+            function showLoading(element = null) {
+                if (element) {
+                    element.textContent = '⏳ Frage Daten ab...';
+                    element.className = 'status-info text-lg font-medium h-6';
+                }
+            }
+
+            // --- Hauptfunktionen ---
+            async function handleQuery() {
+                showLoading(statusElement);
+                queryButton.disabled = true;
+                queryButtonText.textContent = 'Lädt...';
+                showJsonButton.disabled = true;
+                exportButton.disabled = true;
+                
+                const filters = {};
+                inputIds.forEach(id => { 
+                    const element = document.getElementById(id);
+                    if (element) {
+                        filters[id] = element.value; 
+                    }
+                });
+                
+                const active_dimensions = [], active_values = [];
+                const dimension_keys = ["siteId", "locationId", "WMSLocationId", "ConfigId", "SizeId", "ColorId", "StyleId", "InventStatusId", "BatchId"];
+                
+                dimension_keys.forEach(key => {
+                    const value = filters[key];
+                    if (value && value !== "." && value !== "*") {
+                        active_dimensions.push(key);
+                        active_values.push(value);
+                    }
+                });
+                
+                lastSentPayload = {
+                    "dimensionDataSource": "fno",
+                    "filters": { 
+                        "organizationId": [filters.organizationId], 
+                        "productId": [filters.productId], 
+                        "dimensions": active_dimensions, 
+                        "values": [active_values] 
+                    },
+                    "groupByValues": dimension_keys,
+                    "returnNegative": true
+                };
+
+                try {
+                    const response = await fetch('/api/inventory', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(filters),
+                    });
+                    
+                    if (!response.ok) {
+                        let errorMessage;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.detail || `HTTP-Fehler: ${response.status}`;
+                        } catch {
+                            errorMessage = `HTTP-Fehler: ${response.status} ${response.statusText}`;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    
+                    const data = await response.json();
+                    currentData = data;
+                    table.setData(data);
+                    showSuccess(`${data.length} Ergebnis(se) erfolgreich geladen!`, statusElement);
+                    showJsonButton.disabled = false;
+                    exportButton.disabled = data.length === 0;
+                    
+                } catch (error) {
+                    showError(error.message, statusElement);
+                    currentData = [];
+                    table.setData([]);
+                } finally {
+                    queryButton.disabled = false;
+                    queryButtonText.textContent = 'Bestand abfragen';
+                }
+            }
+            
+            function showJsonModal() {
+                if (lastSentPayload) {
+                    jsonPayloadContainer.textContent = JSON.stringify(lastSentPayload, null, 2);
+                    jsonModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+            
+            function hideJsonModal() {
+                jsonModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+
+            window.table = table;
+        });
+    </script>
+</body>
+</html>
