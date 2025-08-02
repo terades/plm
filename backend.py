@@ -42,6 +42,7 @@ def init_query_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
                 filters TEXT NOT NULL,
+                result_count INTEGER NOT NULL,
                 data TEXT NOT NULL
             )
             """
@@ -200,14 +201,14 @@ def save_queries(queries: List[Dict[str, Any]]) -> None:
             conn.close()
 
 
-def save_inventory_result(timestamp: str, filters: Dict[str, Any], data: List[Dict[str, Any]]) -> None:
+def save_inventory_result(timestamp: str, filters: Dict[str, Any], result_count: int, data: List[Dict[str, Any]]) -> None:
     """Persist the retrieved inventory data in the SQLite database."""
     try:
         conn = sqlite3.connect(QUERY_DB)
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO results (timestamp, filters, data) VALUES (?, ?, ?)",
-            (timestamp, json.dumps(filters), json.dumps(data)),
+            "INSERT INTO results (timestamp, filters, result_count, data) VALUES (?, ?, ?, ?)",
+            (timestamp, json.dumps(filters), result_count, json.dumps(data)),
         )
         conn.commit()
     except Exception as e:
@@ -245,16 +246,18 @@ async def get_inventory(filters: QueryFilters):
 
         client = D365InventoryClient()
         result = client.query_inventory(query_payload=payload)
+        result_count = len(result)
+        logging.info(f"Abfrage lieferte {result_count} Zeilen")
 
         timestamp = datetime.utcnow().isoformat()
         query_info = {
             "timestamp": timestamp,
             "filters": filters.dict(),
-            "resultCount": len(result),
+            "resultCount": result_count,
         }
         if tracking_enabled:
             last_query_info.update(query_info)
-        save_inventory_result(timestamp, filters.dict(), result)
+        save_inventory_result(timestamp, filters.dict(), result_count, result)
 
         response = query_info.copy()
         response["data"] = result
