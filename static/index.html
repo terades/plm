@@ -475,6 +475,7 @@
         <!-- Status Message -->
         <div class="text-center mb-6">
             <p id="status" class="status-info text-lg font-medium h-6"></p>
+            <p id="lastUpdate" class="text-sm text-gray-500 mt-2"></p>
         </div>
 
         <!-- Table Controls -->
@@ -944,6 +945,7 @@
             const queryButton = document.getElementById('queryButton');
             const queryButtonText = document.getElementById('queryButtonText');
             const statusElement = document.getElementById('status');
+            const lastUpdateElement = document.getElementById('lastUpdate');
             const showJsonButton = document.getElementById('showJsonButton');
             const exportButton = document.getElementById('exportButton');
             const jsonModal = document.getElementById('jsonModal');
@@ -1073,13 +1075,12 @@
 
             // --- Hauptfunktionen ---
             async function handleQuery() {
-                showLoading(statusElement);
                 queryButton.disabled = true;
                 queryButtonText.textContent = 'Lädt...';
                 loadingOverlay.classList.remove('hidden');
                 showJsonButton.disabled = true;
                 exportButton.disabled = true;
-                
+
                 const filters = {};
                 inputIds.forEach(id => {
                     const element = document.getElementById(id);
@@ -1096,10 +1097,17 @@
                 } else {
                     filters.productIds = [];
                 }
-                
+
+                if (filters.productIds.length > 0) {
+                    statusElement.textContent = `⏳ Frage Daten ab für: ${filters.productIds.join(', ')}`;
+                } else {
+                    statusElement.textContent = '⏳ Frage Daten ab...';
+                }
+                statusElement.className = 'status-info text-lg font-medium h-6';
+
                 const active_dimensions = [], active_values = [];
                 const dimension_keys = ["siteId", "locationId", "WMSLocationId", "ConfigId", "SizeId", "ColorId", "StyleId", "InventStatusId", "BatchId"];
-                
+
                 dimension_keys.forEach(key => {
                     const value = filters[key];
                     if (value && value !== "." && value !== "*") {
@@ -1129,7 +1137,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(filters),
                     });
-                    
+
                     if (!response.ok) {
                         let errorMessage;
                         try {
@@ -1140,14 +1148,20 @@
                         }
                         throw new Error(errorMessage);
                     }
-                    
+
                     const data = await response.json();
-                    currentData = data;
-                    table.setData(data);
-                    showSuccess(`${data.length} Ergebnis(se) erfolgreich geladen!`, statusElement);
+                    currentData = data.data || [];
+                    table.setData(currentData);
+                    showSuccess(`${data.resultCount} Ergebnis(se) erfolgreich geladen!`, statusElement);
                     showJsonButton.disabled = false;
-                    exportButton.disabled = data.length === 0;
-                    
+                    exportButton.disabled = currentData.length === 0;
+                    if (data.timestamp) {
+                        const ts = new Date(data.timestamp).toLocaleString();
+                        const products = data.filters?.productIds?.join(', ');
+                        const prodText = products ? ` | Produkte: ${products}` : '';
+                        lastUpdateElement.textContent = `Letzte Abfrage: ${ts}${prodText}`;
+                    }
+
                 } catch (error) {
                     showError(error.message, statusElement);
                     currentData = [];
@@ -1158,6 +1172,27 @@
                     loadingOverlay.classList.add('hidden');
                 }
             }
+
+            async function fetchStatus() {
+                try {
+                    const response = await fetch('/api/status');
+                    if (!response.ok) return;
+                    const info = await response.json();
+                    if (info && info.timestamp) {
+                        const ts = new Date(info.timestamp).toLocaleString();
+                        const products = info.filters?.productIds?.join(', ');
+                        const prodText = products ? ` | Produkte: ${products}` : '';
+                        lastUpdateElement.textContent = `Letzte Abfrage: ${ts}${prodText}`;
+                    } else {
+                        lastUpdateElement.textContent = 'Noch keine Abfrage durchgeführt.';
+                    }
+                } catch (err) {
+                    console.error('Status-Fehler', err);
+                }
+            }
+
+            fetchStatus();
+            setInterval(fetchStatus, 10000);
             
             function showJsonModal() {
                 if (lastSentPayload) {
