@@ -27,8 +27,19 @@ einem Verbindungsfehler wie `net::ERR_CONNECTION_REFUSED` im Browser fuehrt.
 
 ## Persistenz der Abfragen
 
-Gespeicherte Abfragen werden in einer lokalen SQLite-Datenbank (`queries.sqlite`) abgelegt.
+Gespeicherte Abfragen sowie die zugehörigen Abfrageergebnisse werden in einer lokalen SQLite-Datenbank (`queries.sqlite`) abgelegt.
+Die Ergebnisse jeder erfolgreichen Bestandsabfrage werden zusammen mit Zeitstempel und Filtern in der Tabelle `results` gespeichert.
 SQLite benötigt keine zusätzliche Serverinstallation und legt die Daten direkt im Projektverzeichnis ab.
+
+## API-Dokumentation
+
+FastAPI stellt eine automatisch generierte Dokumentation zur Verfügung.
+Nach dem Start der Anwendung kann sie im Browser aufgerufen werden:
+
+- Swagger UI: <http://127.0.0.1:8000/docs>
+- ReDoc: <http://127.0.0.1:8000/redoc>
+
+Die zugrundeliegende OpenAPI-Spezifikation ist zudem unter <http://127.0.0.1:8000/openapi.json> abrufbar.
 
 ## Benötigte Umgebungsvariablen
 

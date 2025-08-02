@@ -24,7 +24,7 @@ QUERY_DB = os.path.join(BASE_DIR, "queries.sqlite")
 
 
 def init_query_db() -> None:
-    """Initialize the SQLite database used for storing queries."""
+    """Initialize the SQLite database used for storing queries and results."""
     try:
         conn = sqlite3.connect(QUERY_DB)
         cur = conn.cursor()
@@ -32,6 +32,16 @@ def init_query_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS queries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data TEXT NOT NULL
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                filters TEXT NOT NULL,
                 data TEXT NOT NULL
             )
             """
@@ -189,6 +199,23 @@ def save_queries(queries: List[Dict[str, Any]]) -> None:
         if 'conn' in locals():
             conn.close()
 
+
+def save_inventory_result(timestamp: str, filters: Dict[str, Any], data: List[Dict[str, Any]]) -> None:
+    """Persist the retrieved inventory data in the SQLite database."""
+    try:
+        conn = sqlite3.connect(QUERY_DB)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO results (timestamp, filters, data) VALUES (?, ?, ?)",
+            (timestamp, json.dumps(filters), json.dumps(data)),
+        )
+        conn.commit()
+    except Exception as e:
+        logging.error(f"Fehler beim Speichern der Ergebnisdaten: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 # API-Endpunkt, der die Abfrage durchführt
 @app.post("/api/inventory")
 async def get_inventory(filters: QueryFilters):
@@ -227,6 +254,7 @@ async def get_inventory(filters: QueryFilters):
         }
         if tracking_enabled:
             last_query_info.update(query_info)
+        save_inventory_result(timestamp, filters.dict(), result)
 
         response = query_info.copy()
         response["data"] = result
