@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Optional, List, Any
+import asyncio
 
 # Importieren Sie Ihre bewährte D365InventoryClient-Klasse
 from datetime import datetime, timedelta
@@ -32,6 +33,7 @@ def init_query_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS queries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                interval INTEGER NOT NULL,
                 data TEXT NOT NULL
             )
             """
@@ -155,9 +157,10 @@ class QueryFilters(BaseModel):
 class TrackingConfig(BaseModel):
     enabled: bool
 
-
-class SavedQueries(BaseModel):
-    queries: List[Dict[str, Any]]
+class ScheduledQuery(BaseModel):
+    id: Optional[int] = None
+    filters: Dict[str, Any]
+    interval: int
 
 # FastAPI-Anwendung initialisieren
 # WICHTIG: Diese Zeile steht auf der obersten Ebene (nicht eingerückt)
@@ -172,9 +175,13 @@ def load_queries() -> List[Dict[str, Any]]:
     try:
         conn = sqlite3.connect(QUERY_DB)
         cur = conn.cursor()
-        cur.execute("SELECT data FROM queries ORDER BY id")
+        cur.execute("SELECT id, interval, data FROM queries ORDER BY id")
         rows = cur.fetchall()
-        return [json.loads(row[0]) for row in rows]
+        result = []
+        for row in rows:
+            data = json.loads(row[2])
+            result.append({"id": row[0], "interval": row[1], "filters": data})
+        return result
     except Exception as e:
         logging.error(f"Fehler beim Öffnen der Query-Datenbank: {e}")
         return []
@@ -183,22 +190,113 @@ def load_queries() -> List[Dict[str, Any]]:
             conn.close()
 
 
-def save_queries(queries: List[Dict[str, Any]]) -> None:
+def add_or_update_query(query: ScheduledQuery) -> int:
     try:
         conn = sqlite3.connect(QUERY_DB)
         cur = conn.cursor()
-        cur.execute("DELETE FROM queries")
-        cur.executemany(
-            "INSERT INTO queries (data) VALUES (?)",
-            [(json.dumps(q),) for q in queries],
-        )
+        if query.id is None:
+            cur.execute(
+                "INSERT INTO queries (interval, data) VALUES (?, ?)",
+                (query.interval, json.dumps(query.filters)),
+            )
+            query_id = cur.lastrowid
+        else:
+            cur.execute(
+                "UPDATE queries SET interval=?, data=? WHERE id=?",
+                (query.interval, json.dumps(query.filters), query.id),
+            )
+            query_id = query.id
         conn.commit()
+        return query_id
     except Exception as e:
         logging.error(f"Fehler beim Schreiben in die Query-Datenbank: {e}")
         raise
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+def delete_query(query_id: int) -> None:
+    try:
+        conn = sqlite3.connect(QUERY_DB)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM queries WHERE id=?", (query_id,))
+        conn.commit()
+    except Exception as e:
+        logging.error(f"Fehler beim Löschen aus der Query-Datenbank: {e}")
+        raise
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+# ---------------------------- Scheduler Logic ----------------------------
+scheduled_queries: Dict[int, Dict[str, Any]] = {}
+
+
+async def run_scheduler() -> None:
+    client = D365InventoryClient()
+    while True:
+        now = datetime.utcnow()
+        for qid, info in list(scheduled_queries.items()):
+            if now >= info["next_run"]:
+                filters_model = QueryFilters(**info["filters"])
+                try:
+                    all_vals = filters_model.dict()
+                    active_dimensions, active_values = [], []
+                    dimension_keys = [
+                        "siteId",
+                        "locationId",
+                        "WMSLocationId",
+                        "ConfigId",
+                        "SizeId",
+                        "ColorId",
+                        "StyleId",
+                        "InventStatusId",
+                        "BatchId",
+                    ]
+                    for key in dimension_keys:
+                        value = all_vals.get(key)
+                        if value and value not in [".", "*"]:
+                            active_dimensions.append(key)
+                            active_values.append(value)
+                    payload = {
+                        "dimensionDataSource": "fno",
+                        "filters": {
+                            "organizationId": [all_vals["organizationId"]],
+                            "productId": all_vals["productIds"],
+                            "dimensions": active_dimensions,
+                            "values": [active_values],
+                        },
+                        "groupByValues": dimension_keys,
+                        "returnNegative": True,
+                    }
+                    result = client.query_inventory(query_payload=payload)
+                    result_count = len(result)
+                    timestamp = datetime.utcnow().isoformat()
+                    if tracking_enabled:
+                        last_query_info.update({
+                            "timestamp": timestamp,
+                            "filters": info["filters"],
+                            "resultCount": result_count,
+                        })
+                    save_inventory_result(timestamp, info["filters"], result_count, result)
+                except Exception as e:
+                    logging.error(f"Fehler bei geplanter Abfrage {qid}: {e}")
+                finally:
+                    info["next_run"] = now + timedelta(seconds=info["interval"])
+        await asyncio.sleep(1)
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    for q in load_queries():
+        scheduled_queries[q["id"]] = {
+            "filters": q["filters"],
+            "interval": q["interval"],
+            "next_run": datetime.utcnow(),
+        }
+    asyncio.create_task(run_scheduler())
 
 
 def save_inventory_result(timestamp: str, filters: Dict[str, Any], result_count: int, data: List[Dict[str, Any]]) -> None:
@@ -288,9 +386,21 @@ async def get_saved_queries():
 
 
 @app.post("/api/queries")
-async def update_saved_queries(query_list: SavedQueries):
-    save_queries(query_list.queries)
-    return {"status": "ok"}
+async def upsert_saved_query(query: ScheduledQuery):
+    query_id = add_or_update_query(query)
+    scheduled_queries[query_id] = {
+        "filters": query.filters,
+        "interval": query.interval,
+        "next_run": datetime.utcnow(),
+    }
+    return {"id": query_id}
+
+
+@app.delete("/api/queries/{query_id}")
+async def remove_saved_query(query_id: int):
+    delete_query(query_id)
+    scheduled_queries.pop(query_id, None)
+    return {"status": "deleted"}
 
 
 @app.get("/api/status")
