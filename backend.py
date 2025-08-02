@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 
 # Importieren Sie Ihre bewährte D365InventoryClient-Klasse
 from datetime import datetime, timedelta
@@ -113,6 +113,9 @@ class QueryFilters(BaseModel):
 # WICHTIG: Diese Zeile steht auf der obersten Ebene (nicht eingerückt)
 app = FastAPI()
 
+# Informationen zur letzten erfolgreichen Abfrage
+last_query_info: Dict[str, Any] = {}
+
 # API-Endpunkt, der die Abfrage durchführt
 @app.post("/api/inventory")
 async def get_inventory(filters: QueryFilters):
@@ -127,7 +130,7 @@ async def get_inventory(filters: QueryFilters):
             if value and value not in [".", "*"]:
                 active_dimensions.append(key)
                 active_values.append(value)
-        
+
         payload = {
             "dimensionDataSource": "fno",
             "filters": {
@@ -140,15 +143,29 @@ async def get_inventory(filters: QueryFilters):
             "returnNegative": True
         }
 
-        # D365 Client initialisieren und Abfrage durchführen
-        # Für eine produktive Anwendung würde man den Client nur einmal erstellen
         client = D365InventoryClient()
         result = client.query_inventory(query_payload=payload)
-        return result
+
+        timestamp = datetime.utcnow().isoformat()
+        query_info = {
+            "timestamp": timestamp,
+            "filters": filters.dict(),
+            "resultCount": len(result),
+        }
+        last_query_info.update(query_info)
+
+        response = query_info.copy()
+        response["data"] = result
+        return response
 
     except Exception as e:
         logging.error(f"API-Fehler: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/status")
+async def get_status():
+    return last_query_info
 
 
 # Basisverzeichnis des Skripts bestimmen
