@@ -27,8 +27,8 @@ einem Verbindungsfehler wie `net::ERR_CONNECTION_REFUSED` im Browser fuehrt.
 
 ## Persistenz der Abfragen
 
-Gespeicherte Abfragen werden in einer lokalen `shelve`-Datenbank (`queries.db`) abgelegt.
-Diese einfache NoSQL-Lösung benötigt keine zusätzlichen Treiber und legt die Daten im Projektverzeichnis ab.
+Gespeicherte Abfragen werden in einer lokalen SQLite-Datenbank (`queries.sqlite`) abgelegt.
+SQLite benötigt keine zusätzliche Serverinstallation und legt die Daten direkt im Projektverzeichnis ab.
 
 ## Benötigte Umgebungsvariablen
 
