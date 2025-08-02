@@ -1,6 +1,7 @@
 import os
-import shelve
 import logging
+import sqlite3
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -19,7 +20,31 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Basisverzeichnisse und Dateien
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-QUERY_DB = os.path.join(BASE_DIR, "queries.db")
+QUERY_DB = os.path.join(BASE_DIR, "queries.sqlite")
+
+
+def init_query_db() -> None:
+    """Initialize the SQLite database used for storing queries."""
+    try:
+        conn = sqlite3.connect(QUERY_DB)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS queries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data TEXT NOT NULL
+            )
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        logging.error(f"Fehler beim Initialisieren der Query-Datenbank: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+init_query_db()
 
 # --------------------------------------------------------------------
 # KLASSE ZUR D365-KOMMUNIKATION
@@ -134,20 +159,35 @@ tracking_enabled: bool = True
 
 def load_queries() -> List[Dict[str, Any]]:
     try:
-        with shelve.open(QUERY_DB) as db:
-            return db.get("queries", [])
+        conn = sqlite3.connect(QUERY_DB)
+        cur = conn.cursor()
+        cur.execute("SELECT data FROM queries ORDER BY id")
+        rows = cur.fetchall()
+        return [json.loads(row[0]) for row in rows]
     except Exception as e:
         logging.error(f"Fehler beim Öffnen der Query-Datenbank: {e}")
         return []
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 
 def save_queries(queries: List[Dict[str, Any]]) -> None:
     try:
-        with shelve.open(QUERY_DB) as db:
-            db["queries"] = queries
+        conn = sqlite3.connect(QUERY_DB)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM queries")
+        cur.executemany(
+            "INSERT INTO queries (data) VALUES (?)",
+            [(json.dumps(q),) for q in queries],
+        )
+        conn.commit()
     except Exception as e:
         logging.error(f"Fehler beim Schreiben in die Query-Datenbank: {e}")
         raise
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 # API-Endpunkt, der die Abfrage durchführt
 @app.post("/api/inventory")
