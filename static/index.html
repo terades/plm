@@ -334,7 +334,30 @@
                 padding: 0.5rem;
                 font-size: 0.875rem;
             }
-            
+
+            .custom-table thead {
+                display: none;
+            }
+
+            .custom-table tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid var(--border-primary);
+                border-radius: 0.5rem;
+            }
+
+            .custom-table td {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            .custom-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--text-secondary);
+            }
+
             .pagination {
                 flex-wrap: wrap;
                 gap: 0.25rem;
@@ -523,6 +546,11 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-white text-4xl"></i>
     </div>
 
     <script>
@@ -747,7 +775,8 @@
                 tableBody.innerHTML = pageData.map(row => {
                     const cells = this.columns.map(column => {
                         const value = row[column];
-                        return `<td>${value || ''}</td>`;
+                        const label = headerMapping[column.toLowerCase()] || column;
+                        return `<td data-label="${label}">${value || ''}</td>`;
                     }).join('');
                     return `<tr class="transition-all duration-200">${cells}</tr>`;
                 }).join('');
@@ -921,6 +950,7 @@
             const closeModalButton = document.getElementById('closeModalButton');
             const copyJsonButton = document.getElementById('copyJsonButton');
             const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
+            const loadingOverlay = document.getElementById('loadingOverlay');
 
             // Tag Input Setup for Produkt-IDs
             const productIdsHidden = document.getElementById('productIds');
@@ -972,6 +1002,19 @@
             }
 
             const inputIds = ['organizationId', 'productIds', 'siteId', 'locationId', 'WMSLocationId', 'InventStatusId', 'ConfigId', 'SizeId', 'ColorId', 'StyleId', 'BatchId'];
+
+            const savedFilters = JSON.parse(localStorage.getItem('filters') || '{}');
+            inputIds.forEach(id => {
+                const el = document.getElementById(id);
+                const saved = savedFilters[id];
+                if (!el || !saved) return;
+                if (id === 'productIds') {
+                    saved.split(/[,\n]+/).forEach(v => addProductTag(v));
+                    productIdsInput.value = '';
+                } else {
+                    el.value = saved;
+                }
+            });
 
             // --- Event Listeners ---
             queryButton.addEventListener('click', handleQuery);
@@ -1033,6 +1076,7 @@
                 showLoading(statusElement);
                 queryButton.disabled = true;
                 queryButtonText.textContent = 'Lädt...';
+                loadingOverlay.classList.remove('hidden');
                 showJsonButton.disabled = true;
                 exportButton.disabled = true;
                 
@@ -1076,6 +1120,9 @@
                     "returnNegative": true
                 };
 
+                const filtersToSave = Object.assign({}, filters, { productIds: filters.productIds.join(',') });
+                localStorage.setItem('filters', JSON.stringify(filtersToSave));
+
                 try {
                     const response = await fetch('/api/inventory', {
                         method: 'POST',
@@ -1108,6 +1155,7 @@
                 } finally {
                     queryButton.disabled = false;
                     queryButtonText.textContent = 'Bestand abfragen';
+                    loadingOverlay.classList.add('hidden');
                 }
             }
             
