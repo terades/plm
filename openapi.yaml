@@ -58,25 +58,49 @@ paths:
                 $ref: '#/components/schemas/TrackingStatus'
   /api/queries:
     get:
-      summary: Retrieve saved queries
+      summary: Retrieve scheduled queries
       responses:
         '200':
-          description: List of saved queries
+          description: List of scheduled queries
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SavedQueries'
+                type: object
+                properties:
+                  queries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduledQuery'
     post:
-      summary: Update saved queries
+      summary: Create or update a scheduled query
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SavedQueries'
+              $ref: '#/components/schemas/ScheduledQuery'
       responses:
         '200':
-          description: Save status
+          description: Identifier of stored query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+  /api/queries/{queryId}:
+    delete:
+      summary: Delete a scheduled query
+      parameters:
+        - in: path
+          name: queryId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deletion status
           content:
             application/json:
               schema:
@@ -147,12 +171,16 @@ components:
           type: boolean
       required:
         - enabled
-    SavedQueries:
+    ScheduledQuery:
       type: object
       properties:
-        queries:
-          type: array
-          items:
-            type: object
+        id:
+          type: integer
+        filters:
+          $ref: '#/components/schemas/QueryFilters'
+        interval:
+          type: integer
+          description: Interval in seconds
       required:
-        - queries
+        - filters
+        - interval

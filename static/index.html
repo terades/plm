@@ -488,10 +488,11 @@
         <!-- Saved Queries Section -->
         <div class="card-bg p-6 rounded-xl shadow-lg mb-6">
             <h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary)">Gespeicherte Abfragen</h2>
-            <textarea id="savedQueries" class="w-full input-style p-3 h-40 rounded-lg mb-4"></textarea>
-            <div class="text-right">
-                <button id="saveQueriesButton" class="btn-primary font-bold py-2 px-4 rounded-xl">Speichern</button>
+            <div class="flex gap-4 mb-4">
+                <input type="number" id="queryInterval" class="input-style p-2 w-32" placeholder="Intervall (s)">
+                <button id="saveCurrentFilters" class="btn-primary font-bold py-2 px-4 rounded-xl">Aktuelle Filter speichern</button>
             </div>
+            <ul id="savedQueriesList" class="space-y-2"></ul>
         </div>
 
         <!-- Table Controls -->
@@ -970,8 +971,11 @@
             const copyJsonButton = document.getElementById('copyJsonButton');
             const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
             const loadingOverlay = document.getElementById('loadingOverlay');
-            const savedQueriesTextarea = document.getElementById('savedQueries');
-            const saveQueriesButton = document.getElementById('saveQueriesButton');
+            const savedQueriesList = document.getElementById('savedQueriesList');
+            const queryIntervalInput = document.getElementById('queryInterval');
+            const saveCurrentFiltersButton = document.getElementById('saveCurrentFilters');
+
+            let editingQueryId = null;
 
             trackingToggle.addEventListener('change', async () => {
                 try {
@@ -983,6 +987,25 @@
                     fetchStatus();
                 } catch (err) {
                     console.error('Tracking update failed', err);
+                }
+            });
+
+            saveCurrentFiltersButton.addEventListener('click', async () => {
+                try {
+                    const filters = getFiltersFromInputs();
+                    const interval = parseInt(queryIntervalInput.value) || 60;
+                    await fetch('/api/queries', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: editingQueryId, filters, interval })
+                    });
+                    editingQueryId = null;
+                    queryIntervalInput.value = '';
+                    loadSavedQueries();
+                    showSuccess('Abfrage gespeichert!', statusElement);
+                } catch (err) {
+                    console.error('Save query failed', err);
+                    showError('Speichern fehlgeschlagen', statusElement);
                 }
             });
 
@@ -1082,6 +1105,41 @@
             });
 
             // --- Hilfsfunktionen ---
+
+            function getFiltersFromInputs() {
+                const filters = {};
+                inputIds.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        filters[id] = element.value;
+                    }
+                });
+                if (filters.productIds) {
+                    filters.productIds = filters.productIds
+                        .split(/[,\n]+/)
+                        .map(v => v.trim())
+                        .filter(v => v);
+                } else {
+                    filters.productIds = [];
+                }
+                return filters;
+            }
+
+            function applyFilters(f) {
+                inputIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (id === 'productIds') {
+                        productIdTags = [];
+                        productIdTagsDiv.innerHTML = '';
+                        (f.productIds || []).forEach(v => addProductTag(v));
+                        productIdsInput.value = '';
+                    } else {
+                        el.value = f[id] || '';
+                    }
+                });
+            }
+
             function showError(message, element = null) {
                 console.error('Fehler:', message);
                 if (element) {
@@ -1113,22 +1171,7 @@
                 showJsonButton.disabled = true;
                 exportButton.disabled = true;
 
-                const filters = {};
-                inputIds.forEach(id => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        filters[id] = element.value;
-                    }
-                });
-
-                if (filters.productIds) {
-                    filters.productIds = filters.productIds
-                        .split(/[,\n]+/)
-                        .map(v => v.trim())
-                        .filter(v => v);
-                } else {
-                    filters.productIds = [];
-                }
+                const filters = getFiltersFromInputs();
 
                 if (filters.productIds.length > 0) {
                     statusElement.textContent = `⏳ Frage Daten ab für: ${filters.productIds.join(', ')}`;
@@ -1234,31 +1277,45 @@
                     const response = await fetch('/api/queries');
                     if (response.ok) {
                         const data = await response.json();
-                        savedQueriesTextarea.value = JSON.stringify(data.queries || [], null, 2);
+                        savedQueriesList.innerHTML = '';
+                        (data.queries || []).forEach(q => {
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
+                            const info = document.createElement('span');
+                            const products = (q.filters.productIds || []).join(', ');
+                            info.textContent = `ID ${q.id} | Produkte: ${products} | Intervall: ${q.interval}s`;
+                            const actions = document.createElement('div');
+                            const editBtn = document.createElement('button');
+                            editBtn.className = 'btn-secondary px-2 py-1 rounded-lg mr-2';
+                            editBtn.textContent = 'Bearbeiten';
+                            editBtn.addEventListener('click', () => {
+                                editingQueryId = q.id;
+                                queryIntervalInput.value = q.interval;
+                                applyFilters(q.filters);
+                            });
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'btn-secondary px-2 py-1 rounded-lg';
+                            deleteBtn.textContent = 'Löschen';
+                            deleteBtn.addEventListener('click', async () => {
+                                await fetch(`/api/queries/${q.id}`, { method: 'DELETE' });
+                                loadSavedQueries();
+                            });
+                            actions.appendChild(editBtn);
+                            actions.appendChild(deleteBtn);
+                            li.appendChild(info);
+                            li.appendChild(actions);
+                            savedQueriesList.appendChild(li);
+                        });
                     }
                 } catch (err) {
                     console.error('Load queries failed', err);
                 }
             }
 
-            saveQueriesButton.addEventListener('click', async () => {
-                try {
-                    const parsed = JSON.parse(savedQueriesTextarea.value || '[]');
-                    await fetch('/api/queries', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ queries: parsed })
-                    });
-                    showSuccess('Abfragen gespeichert!', statusElement);
-                } catch (err) {
-                    console.error('Save queries failed', err);
-                    showError('Speichern fehlgeschlagen', statusElement);
-                }
-            });
-
             fetchStatus();
             setInterval(fetchStatus, 10000);
             loadSavedQueries();
+            setInterval(loadSavedQueries, 10000);
             
             function showJsonModal() {
                 if (lastSentPayload) {
