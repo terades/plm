@@ -485,6 +485,15 @@
             <p id="lastUpdate" class="text-sm text-gray-500 mt-2"></p>
         </div>
 
+        <!-- Saved Queries Section -->
+        <div class="card-bg p-6 rounded-xl shadow-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary)">Gespeicherte Abfragen</h2>
+            <textarea id="savedQueries" class="w-full input-style p-3 h-40 rounded-lg mb-4"></textarea>
+            <div class="text-right">
+                <button id="saveQueriesButton" class="btn-primary font-bold py-2 px-4 rounded-xl">Speichern</button>
+            </div>
+        </div>
+
         <!-- Table Controls -->
         <div id="tableControls" class="hidden mb-6 card-bg p-4 rounded-xl shadow-md">
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -961,6 +970,8 @@
             const copyJsonButton = document.getElementById('copyJsonButton');
             const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
             const loadingOverlay = document.getElementById('loadingOverlay');
+            const savedQueriesTextarea = document.getElementById('savedQueries');
+            const saveQueriesButton = document.getElementById('saveQueriesButton');
 
             trackingToggle.addEventListener('change', async () => {
                 try {
@@ -1218,8 +1229,36 @@
                 }
             }
 
+            async function loadSavedQueries() {
+                try {
+                    const response = await fetch('/api/queries');
+                    if (response.ok) {
+                        const data = await response.json();
+                        savedQueriesTextarea.value = JSON.stringify(data.queries || [], null, 2);
+                    }
+                } catch (err) {
+                    console.error('Load queries failed', err);
+                }
+            }
+
+            saveQueriesButton.addEventListener('click', async () => {
+                try {
+                    const parsed = JSON.parse(savedQueriesTextarea.value || '[]');
+                    await fetch('/api/queries', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ queries: parsed })
+                    });
+                    showSuccess('Abfragen gespeichert!', statusElement);
+                } catch (err) {
+                    console.error('Save queries failed', err);
+                    showError('Speichern fehlgeschlagen', statusElement);
+                }
+            });
+
             fetchStatus();
             setInterval(fetchStatus, 10000);
+            loadSavedQueries();
             
             function showJsonModal() {
                 if (lastSentPayload) {
