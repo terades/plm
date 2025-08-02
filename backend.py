@@ -1,5 +1,5 @@
 import os
-import json
+import shelve
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Basisverzeichnisse und Dateien
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-QUERY_FILE = os.path.join(BASE_DIR, "queries.json")
+QUERY_DB = os.path.join(BASE_DIR, "queries.db")
 
 # --------------------------------------------------------------------
 # KLASSE ZUR D365-KOMMUNIKATION
@@ -133,21 +133,20 @@ tracking_enabled: bool = True
 
 
 def load_queries() -> List[Dict[str, Any]]:
-    if os.path.exists(QUERY_FILE):
-        try:
-            with open(QUERY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logging.error(f"Fehler beim Lesen der Query-Datei: {e}")
-    return []
+    try:
+        with shelve.open(QUERY_DB) as db:
+            return db.get("queries", [])
+    except Exception as e:
+        logging.error(f"Fehler beim Öffnen der Query-Datenbank: {e}")
+        return []
 
 
 def save_queries(queries: List[Dict[str, Any]]) -> None:
     try:
-        with open(QUERY_FILE, "w", encoding="utf-8") as f:
-            json.dump(queries, f, ensure_ascii=False, indent=2)
+        with shelve.open(QUERY_DB) as db:
+            db["queries"] = queries
     except Exception as e:
-        logging.error(f"Fehler beim Schreiben der Query-Datei: {e}")
+        logging.error(f"Fehler beim Schreiben in die Query-Datenbank: {e}")
         raise
 
 # API-Endpunkt, der die Abfrage durchführt
