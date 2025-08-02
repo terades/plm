@@ -475,6 +475,13 @@
         <!-- Status Message -->
         <div class="text-center mb-6">
             <p id="status" class="status-info text-lg font-medium h-6"></p>
+            <div class="flex items-center justify-center gap-2 mt-2">
+                <span class="text-sm text-gray-500">Serverseitiges Tracking</span>
+                <label for="trackingToggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="trackingToggle" class="sr-only peer">
+                    <div class="w-12 h-6 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                </label>
+            </div>
             <p id="lastUpdate" class="text-sm text-gray-500 mt-2"></p>
         </div>
 
@@ -946,6 +953,7 @@
             const queryButtonText = document.getElementById('queryButtonText');
             const statusElement = document.getElementById('status');
             const lastUpdateElement = document.getElementById('lastUpdate');
+            const trackingToggle = document.getElementById('trackingToggle');
             const showJsonButton = document.getElementById('showJsonButton');
             const exportButton = document.getElementById('exportButton');
             const jsonModal = document.getElementById('jsonModal');
@@ -953,6 +961,19 @@
             const copyJsonButton = document.getElementById('copyJsonButton');
             const jsonPayloadContainer = document.getElementById('jsonPayloadContainer');
             const loadingOverlay = document.getElementById('loadingOverlay');
+
+            trackingToggle.addEventListener('change', async () => {
+                try {
+                    await fetch('/api/tracking', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: trackingToggle.checked })
+                    });
+                    fetchStatus();
+                } catch (err) {
+                    console.error('Tracking update failed', err);
+                }
+            });
 
             // Tag Input Setup for Produkt-IDs
             const productIdsHidden = document.getElementById('productIds');
@@ -1170,6 +1191,7 @@
                     queryButton.disabled = false;
                     queryButtonText.textContent = 'Bestand abfragen';
                     loadingOverlay.classList.add('hidden');
+                    fetchStatus();
                 }
             }
 
@@ -1178,7 +1200,12 @@
                     const response = await fetch('/api/status');
                     if (!response.ok) return;
                     const info = await response.json();
-                    if (info && info.timestamp) {
+                    trackingToggle.checked = info.trackingEnabled;
+                    if (!info.trackingEnabled) {
+                        lastUpdateElement.textContent = 'Serverseitiges Tracking ist deaktiviert.';
+                        return;
+                    }
+                    if (info.timestamp) {
                         const ts = new Date(info.timestamp).toLocaleString();
                         const products = info.filters?.productIds?.join(', ');
                         const prodText = products ? ` | Produkte: ${products}` : '';

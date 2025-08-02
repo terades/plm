@@ -109,12 +109,17 @@ class QueryFilters(BaseModel):
     StyleId: Optional[str] = None
     BatchId: Optional[str] = None
 
+
+class TrackingConfig(BaseModel):
+    enabled: bool
+
 # FastAPI-Anwendung initialisieren
 # WICHTIG: Diese Zeile steht auf der obersten Ebene (nicht eingerückt)
 app = FastAPI()
 
 # Informationen zur letzten erfolgreichen Abfrage
 last_query_info: Dict[str, Any] = {}
+tracking_enabled: bool = True
 
 # API-Endpunkt, der die Abfrage durchführt
 @app.post("/api/inventory")
@@ -152,7 +157,8 @@ async def get_inventory(filters: QueryFilters):
             "filters": filters.dict(),
             "resultCount": len(result),
         }
-        last_query_info.update(query_info)
+        if tracking_enabled:
+            last_query_info.update(query_info)
 
         response = query_info.copy()
         response["data"] = result
@@ -163,9 +169,25 @@ async def get_inventory(filters: QueryFilters):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/tracking")
+async def get_tracking():
+    return {"enabled": tracking_enabled}
+
+
+@app.post("/api/tracking")
+async def set_tracking(config: TrackingConfig):
+    global tracking_enabled
+    tracking_enabled = config.enabled
+    if not tracking_enabled:
+        last_query_info.clear()
+    return {"enabled": tracking_enabled}
+
+
 @app.get("/api/status")
 async def get_status():
-    return last_query_info
+    if not tracking_enabled:
+        return {"trackingEnabled": False}
+    return {"trackingEnabled": True, **last_query_info}
 
 
 # Basisverzeichnis des Skripts bestimmen
