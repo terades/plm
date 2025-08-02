@@ -1,6 +1,6 @@
 # PLM Inventory Service
 
-Dieses Projekt stellt eine kleine FastAPI-Anwendung bereit, 
+Dieses Projekt stellt eine kleine FastAPI-Anwendung bereit,
 mit der Bestandsdaten aus Dynamics 365 abgefragt werden können.
 
 ## Anwendung starten
@@ -24,6 +24,11 @@ pip install fastapi uvicorn requests azure-identity azure-keyvault-secrets
 
 Ohne diese Pakete laesst sich der Server nicht starten, was typischerweise zu
 einem Verbindungsfehler wie `net::ERR_CONNECTION_REFUSED` im Browser fuehrt.
+
+## Persistenz der Abfragen
+
+Gespeicherte Abfragen werden in einer lokalen `shelve`-Datenbank (`queries.db`) abgelegt.
+Diese einfache NoSQL-Lösung benötigt keine zusätzlichen Treiber und legt die Daten im Projektverzeichnis ab.
 
 ## Benötigte Umgebungsvariablen
 
