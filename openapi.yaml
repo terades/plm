@@ -1,0 +1,158 @@
+openapi: 3.0.0
+info:
+  title: PLM API
+  version: 1.0.0
+paths:
+  /api/inventory:
+    post:
+      summary: Query inventory data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryFilters'
+      responses:
+        '200':
+          description: Successful query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  filters:
+                    $ref: '#/components/schemas/QueryFilters'
+                  resultCount:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+  /api/tracking:
+    get:
+      summary: Get tracking status
+      responses:
+        '200':
+          description: Tracking status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingStatus'
+    post:
+      summary: Set tracking status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingConfig'
+      responses:
+        '200':
+          description: Updated tracking status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingStatus'
+  /api/queries:
+    get:
+      summary: Retrieve saved queries
+      responses:
+        '200':
+          description: List of saved queries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedQueries'
+    post:
+      summary: Update saved queries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedQueries'
+      responses:
+        '200':
+          description: Save status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /api/status:
+    get:
+      summary: Get status of last query
+      responses:
+        '200':
+          description: Status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trackingEnabled:
+                    type: boolean
+                  timestamp:
+                    type: string
+                    format: date-time
+                  filters:
+                    $ref: '#/components/schemas/QueryFilters'
+                  resultCount:
+                    type: integer
+components:
+  schemas:
+    QueryFilters:
+      type: object
+      properties:
+        organizationId:
+          type: string
+        productIds:
+          type: array
+          items:
+            type: string
+        siteId:
+          type: string
+        locationId:
+          type: string
+        WMSLocationId:
+          type: string
+        InventStatusId:
+          type: string
+        ConfigId:
+          type: string
+        SizeId:
+          type: string
+        ColorId:
+          type: string
+        StyleId:
+          type: string
+        BatchId:
+          type: string
+    TrackingConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+        - enabled
+    TrackingStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+        - enabled
+    SavedQueries:
+      type: object
+      properties:
+        queries:
+          type: array
+          items:
+            type: object
+      required:
+        - queries
